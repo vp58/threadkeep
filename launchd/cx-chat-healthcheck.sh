@@ -6,18 +6,18 @@
 # loads the cx-chat identity. Posts a notification to the configured errors
 # channel on action.
 #
-# Runs under launchd via com.disclawd.cx-chat-healthcheck.plist.
+# Runs under launchd via com.threadkeep.cx-chat-healthcheck.plist.
 
 set -u
 
-REPO_ROOT="${DISCLAWD_REPO_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
-CONFIG="${DISCLAWD_CONFIG:-$REPO_ROOT/config.toml}"
+REPO_ROOT="${THREADKEEP_REPO_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
+CONFIG="${THREADKEEP_CONFIG:-$REPO_ROOT/config.toml}"
 SESSION="cx-chat"
 SEND="$REPO_ROOT/approval/send_message.py"
 
 PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
 export PATH
-export DISCLAWD_CONFIG="$CONFIG"
+export THREADKEEP_CONFIG="$CONFIG"
 
 eval "$(
 PYTHONPATH="$REPO_ROOT/conversations" python3 - <<'PY'

@@ -1,10 +1,10 @@
-# Contributing to Claude Disclawd
+# Contributing to Threadkeep
 
 Thanks for taking the time to look at this project. This file describes how to file issues, propose changes, and what code style we follow.
 
 ## Filing an issue
 
-Open a GitHub issue at https://github.com/vp58/claude-disclawd/issues. Please include:
+Open a GitHub issue at https://github.com/vp58/threadkeep/issues. Please include:
 
 - What you were trying to do
 - What you expected to happen

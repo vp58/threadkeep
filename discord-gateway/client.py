@@ -53,7 +53,7 @@ OP_HEARTBEAT_ACK = 11
 
 def setup_logging() -> logging.Logger:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
-    logger = logging.getLogger("disclawd-gateway")
+    logger = logging.getLogger("threadkeep-gateway")
     if logger.handlers:
         return logger
     logger.setLevel(logging.INFO)
@@ -172,8 +172,8 @@ async def gateway_session(token: str, state: dict[str, Any], logger: logging.Log
                     "intents": INTENTS,
                     "properties": {
                         "os": sys.platform,
-                        "browser": "ClaudeDisclawdGatewayClient",
-                        "device": "ClaudeDisclawdGatewayClient",
+                        "browser": "ThreadkeepGatewayClient",
+                        "device": "ThreadkeepGatewayClient",
                     },
                 },
             }

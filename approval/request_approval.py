@@ -91,7 +91,7 @@ def fetch_messages(channel_id: str, token: str, after: str = "", limit: int = 50
         f"https://discord.com/api/v10/channels/{channel_id}/messages?{query}",
         headers={
             "Authorization": f"Bot {token}",
-            "User-Agent": "ClaudeDisclawd/0.1",
+            "User-Agent": "Threadkeep/0.1",
         },
     )
     with urllib.request.urlopen(req, timeout=20) as resp:

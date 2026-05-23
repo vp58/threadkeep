@@ -1,21 +1,21 @@
-# Claude Disclawd configuration.
+# Threadkeep configuration.
 #
 # Copy this file to config.toml and fill in the values for your install.
 # Every key here can also be set via an environment variable prefixed with
-# DISCLAWD_ (see conversations/config.py for the exact mapping). Env vars
+# THREADKEEP_ (see conversations/config.py for the exact mapping). Env vars
 # always win over the TOML file so you can keep secrets out of the repo.
 
 [paths]
 # Where conversation transcripts live on disk. Path is expanded with ~.
-workspace_root = "~/.claude-disclawd"
-conversations_dir = "~/.claude-disclawd/conversations"
+workspace_root = "~/.threadkeep"
+conversations_dir = "~/.threadkeep/conversations"
 # Optional. If unset, each component logs to its own file under the repo.
-# log_file = "~/.claude-disclawd/disclawd.log"
+# log_file = "~/.threadkeep/threadkeep.log"
 
 [discord]
-# Channel id Disclawd listens to. Top-level posts here become new threads.
+# Channel id Threadkeep listens to. Top-level posts here become new threads.
 chat_channel_id = "000000000000000000"
-# Channel id Disclawd posts errors and stderr to.
+# Channel id Threadkeep posts errors and stderr to.
 errors_channel_id = "000000000000000000"
 # Discord user id of the owner. Only this user can approve outbound sends
 # and only their button presses are honored by the router.
@@ -24,7 +24,7 @@ owner_user_id = "000000000000000000"
 token_env_var = "DISCORD_BOT_TOKEN"
 # Optional fallback: a file containing the bot token. Used only if the env
 # var is unset. Keep the file out of version control and chmod 600.
-# token_file = "~/.config/disclawd/discord-bot-token"
+# token_file = "~/.config/threadkeep/discord-bot-token"
 
 [runtime]
 timezone = "UTC"

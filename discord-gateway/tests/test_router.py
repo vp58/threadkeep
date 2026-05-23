@@ -25,8 +25,8 @@ sys.path.insert(0, str(HERE.parent))
 
 # The router imports config.CONFIG at module load. Point it at the example
 # config so tests don't depend on a local config.toml being present.
-os.environ.setdefault("DISCLAWD_CONFIG", str(HERE.parent.parent / "config.example.toml"))
-os.environ.setdefault("DISCLAWD_OWNER_USER_ID", "111111111111111111")
+os.environ.setdefault("THREADKEEP_CONFIG", str(HERE.parent.parent / "config.example.toml"))
+os.environ.setdefault("THREADKEEP_OWNER_USER_ID", "111111111111111111")
 
 import router  # noqa: E402
 

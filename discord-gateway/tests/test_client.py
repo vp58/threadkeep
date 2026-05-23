@@ -21,8 +21,8 @@ from unittest import mock
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 
-os.environ.setdefault("DISCLAWD_CONFIG", str(HERE.parent.parent / "config.example.toml"))
-os.environ.setdefault("DISCLAWD_OWNER_USER_ID", "111111111111111111")
+os.environ.setdefault("THREADKEEP_CONFIG", str(HERE.parent.parent / "config.example.toml"))
+os.environ.setdefault("THREADKEEP_OWNER_USER_ID", "111111111111111111")
 
 import client  # noqa: E402
 

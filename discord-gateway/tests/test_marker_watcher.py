@@ -23,8 +23,8 @@ from unittest import mock
 HERE = Path(__file__).resolve().parent
 WATCHER_PATH = HERE.parent / "marker-watcher.py"
 
-os.environ.setdefault("DISCLAWD_CONFIG", str(HERE.parent.parent / "config.example.toml"))
-os.environ.setdefault("DISCLAWD_OWNER_USER_ID", "111111111111111111")
+os.environ.setdefault("THREADKEEP_CONFIG", str(HERE.parent.parent / "config.example.toml"))
+os.environ.setdefault("THREADKEEP_OWNER_USER_ID", "111111111111111111")
 
 
 def load_watcher_module():

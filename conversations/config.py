@@ -1,7 +1,7 @@
-"""Configuration loading for Claude Disclawd.
+"""Configuration loading for Threadkeep.
 
 Config source order:
-1. DISCLAWD_CONFIG path, when set
+1. THREADKEEP_CONFIG path, when set
 2. config.toml in the repo root
 3. .env.example as a non-secret fallback for static checks
 """
@@ -50,7 +50,7 @@ class Config:
 
 
 def _config_path() -> Path:
-    env_path = os.environ.get("DISCLAWD_CONFIG")
+    env_path = os.environ.get("THREADKEEP_CONFIG")
     if env_path:
         return Path(env_path).expanduser()
     local = REPO_ROOT / "config.toml"
@@ -69,7 +69,7 @@ def _path_from(raw: dict, key: str, fallback: Path | None = None) -> Path:
     value = raw.get(key)
     path = _expand_path(value) if value else fallback
     if path is None:
-        raise ValueError(f"missing required paths.{key} in disclawd config")
+        raise ValueError(f"missing required paths.{key} in threadkeep config")
     return path
 
 
@@ -81,16 +81,16 @@ def load_config() -> Config:
     discord_raw = data.get("discord", {})
     runtime_raw = data.get("runtime", {})
 
-    workspace_root = _expand_path(os.environ.get("DISCLAWD_VAULT_ROOT")) or _path_from(
+    workspace_root = _expand_path(os.environ.get("THREADKEEP_VAULT_ROOT")) or _path_from(
         paths_raw, "workspace_root", REPO_ROOT
     )
-    conversations_dir = _expand_path(os.environ.get("DISCLAWD_CONVERSATIONS_DIR")) or _path_from(
+    conversations_dir = _expand_path(os.environ.get("THREADKEEP_CONVERSATIONS_DIR")) or _path_from(
         paths_raw, "conversations_dir", workspace_root / "conversations"
     )
-    log_file = _expand_path(os.environ.get("DISCLAWD_LOG_FILE")) or _expand_path(
+    log_file = _expand_path(os.environ.get("THREADKEEP_LOG_FILE")) or _expand_path(
         paths_raw.get("log_file")
     )
-    token_file = _expand_path(os.environ.get("DISCLAWD_TOKEN_FILE")) or _expand_path(
+    token_file = _expand_path(os.environ.get("THREADKEEP_TOKEN_FILE")) or _expand_path(
         discord_raw.get("token_file")
     )
 
@@ -101,17 +101,17 @@ def load_config() -> Config:
             log_file=log_file,
         ),
         discord=DiscordConfig(
-            chat_channel_id=os.environ.get("DISCLAWD_LISTEN_CHANNEL_ID")
+            chat_channel_id=os.environ.get("THREADKEEP_LISTEN_CHANNEL_ID")
             or str(discord_raw.get("chat_channel_id", "")),
-            errors_channel_id=os.environ.get("DISCLAWD_ERRORS_CHANNEL_ID")
+            errors_channel_id=os.environ.get("THREADKEEP_ERRORS_CHANNEL_ID")
             or str(discord_raw.get("errors_channel_id", "")),
-            owner_user_id=os.environ.get("DISCLAWD_OWNER_USER_ID")
+            owner_user_id=os.environ.get("THREADKEEP_OWNER_USER_ID")
             or str(discord_raw.get("owner_user_id", "")),
             token_env_var=str(discord_raw.get("token_env_var") or "DISCORD_BOT_TOKEN"),
             token_file=token_file,
         ),
         runtime=RuntimeConfig(
-            timezone=os.environ.get("DISCLAWD_TIMEZONE")
+            timezone=os.environ.get("THREADKEEP_TIMEZONE")
             or str(runtime_raw.get("timezone") or "UTC"),
             max_messages_per_minute=int(runtime_raw.get("max_messages_per_minute", 5)),
             max_messages_per_hour=int(runtime_raw.get("max_messages_per_hour", 30)),

@@ -16,9 +16,9 @@ runs the slow path out of band.
 By default this daemon is a no-op for the public install. To use it, set
 environment variables:
 
-    DISCLAWD_SLACK_GATE  -- path to a Slack post script that accepts the same
+    THREADKEEP_SLACK_GATE  -- path to a Slack post script that accepts the same
                             flags as documented in docs/PROTOCOL.md
-    DISCLAWD_EMAIL_GATE  -- path to an email send script with the same contract
+    THREADKEEP_EMAIL_GATE  -- path to an email send script with the same contract
 
 Without these, the daemon will log unknown-operation and archive the marker.
 
@@ -56,8 +56,8 @@ PROCESSED_MARKERS_DIR = HERE / "processed-markers"
 LOG_DIR = HERE / "logs"
 LOG_PATH = LOG_DIR / "marker-watcher.log"
 
-SLACK_GATE = os.environ.get("DISCLAWD_SLACK_GATE", "")
-EMAIL_GATE = os.environ.get("DISCLAWD_EMAIL_GATE", "")
+SLACK_GATE = os.environ.get("THREADKEEP_SLACK_GATE", "")
+EMAIL_GATE = os.environ.get("THREADKEEP_EMAIL_GATE", "")
 
 ORPHAN_GRACE_SEC = 30
 DEFAULT_POLL_INTERVAL_SEC = 2
@@ -65,7 +65,7 @@ DEFAULT_POLL_INTERVAL_SEC = 2
 
 def setup_logging() -> logging.Logger:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
-    logger = logging.getLogger("disclawd-marker-watcher")
+    logger = logging.getLogger("threadkeep-marker-watcher")
     if logger.handlers:
         return logger
     logger.setLevel(logging.INFO)
@@ -121,7 +121,7 @@ def edit_discord_message(channel_id: str, message_id: str, content: str,
         headers={
             "Authorization": f"Bot {token}",
             "Content-Type": "application/json",
-            "User-Agent": "ClaudeDisclawdMarkerWatcher/0.1",
+            "User-Agent": "ThreadkeepMarkerWatcher/0.1",
         },
         method="PATCH",
     )
@@ -143,7 +143,7 @@ def fetch_message_content(channel_id: str, message_id: str, token: str,
         f"https://discord.com/api/v10/channels/{channel_id}/messages/{message_id}",
         headers={
             "Authorization": f"Bot {token}",
-            "User-Agent": "ClaudeDisclawdMarkerWatcher/0.1",
+            "User-Agent": "ThreadkeepMarkerWatcher/0.1",
         },
     )
     try:

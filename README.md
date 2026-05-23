@@ -1,4 +1,4 @@
-# Claude Disclawd
+# Threadkeep
 
 Persistent Discord conversation orchestrator for Claude Code.
 
@@ -7,7 +7,7 @@ A single Claude Code session listens to one Discord channel, creates a durable m
 ## What it does
 
 1. You post a message in your configured Discord channel.
-2. Disclawd creates a Discord thread off the message and a markdown conversation file on disk.
+2. Threadkeep creates a Discord thread off the message and a markdown conversation file on disk.
 3. A worker subagent is spawned via the Claude Code Agent tool. It does the actual work and replies in the thread.
 4. You reply in the thread. The worker spawns again with the full prior context loaded.
 5. The conversation file is the source of truth. A small JSON registry maps Discord thread ids to session ids.
@@ -16,7 +16,7 @@ The listener never does work itself. It sets up state and fires the subagent. Th
 
 ## Why this exists
 
-The Claude Code Discord plugin gives you a great single-channel interface but the session does everything inline. If a conversation takes 5 minutes the listener is dead to other inbound messages for those 5 minutes. Disclawd solves that by separating listening from working. Each conversation gets a thread, a transcript file, and its own subagent.
+The Claude Code Discord plugin gives you a great single-channel interface but the session does everything inline. If a conversation takes 5 minutes the listener is dead to other inbound messages for those 5 minutes. Threadkeep solves that by separating listening from working. Each conversation gets a thread, a transcript file, and its own subagent.
 
 ## Features
 
@@ -56,12 +56,12 @@ See `docs/ARCHITECTURE.md` for the full diagram.
 
 ## Configuration
 
-All configuration lives in one `config.toml` file or in environment variables prefixed with `DISCLAWD_`. The repo never reads secrets from the filesystem outside of optional token files you explicitly point at. See `.env.example` for the full set of options.
+All configuration lives in one `config.toml` file or in environment variables prefixed with `THREADKEEP_`. The repo never reads secrets from the filesystem outside of optional token files you explicitly point at. See `.env.example` for the full set of options.
 
 ## Security
 
 - Inbound Discord messages are untrusted input. The worker prompt treats them as such.
-- The listener filters by channel ownership before dispatching. Messages in channels Disclawd does not own are ignored.
+- The listener filters by channel ownership before dispatching. Messages in channels Threadkeep does not own are ignored.
 - Outbound sends require explicit owner approval via Discord buttons or a typed sha confirmation.
 - The default install does not enable `--dangerously-skip-permissions` for the worker. Permission prompts will surface in your Claude Code UI.
 

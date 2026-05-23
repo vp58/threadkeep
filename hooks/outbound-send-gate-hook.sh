@@ -9,10 +9,10 @@
 #
 # Configuration: set the following env vars before installing this hook:
 #
-#   DISCLAWD_GATED_SCRIPTS  -- space-separated list of script basenames to
+#   THREADKEEP_GATED_SCRIPTS  -- space-separated list of script basenames to
 #                              gate, for example: "post_with_gate.py send_with_gate.py"
-#   DISCLAWD_OWNER_USER_ID  -- approver Discord user id
-#   DISCLAWD_BOT_TOKEN_ENV  -- env var name that holds the bot token
+#   THREADKEEP_OWNER_USER_ID  -- approver Discord user id
+#   THREADKEEP_BOT_TOKEN_ENV  -- env var name that holds the bot token
 #
 # Behavior: if the command line invokes any gated script as its first token,
 # require the flag --discord-approval-message-id pointing to a Discord message
@@ -33,7 +33,7 @@ data = json.load(sys.stdin)
 print(data.get('tool_input', {}).get('command', data.get('command', '')))
 " 2>/dev/null || echo "")
 
-GATED_SCRIPTS="${DISCLAWD_GATED_SCRIPTS:-}"
+GATED_SCRIPTS="${THREADKEEP_GATED_SCRIPTS:-}"
 if [[ -z "$GATED_SCRIPTS" ]]; then
   # No gated scripts configured. Pass through.
   echo '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}'
@@ -95,7 +95,7 @@ if not approval_ref or ":" not in approval_ref:
     emit("deny", "Outbound gate call missing --discord-approval-message-id channel:message reference.")
     sys.exit(0)
 
-approver = flag_value(argv, "--discord-approver-user-id") or os.environ.get("DISCLAWD_OWNER_USER_ID", "")
+approver = flag_value(argv, "--discord-approver-user-id") or os.environ.get("THREADKEEP_OWNER_USER_ID", "")
 if not approver:
     emit("deny", "Outbound gate call missing approver user id.")
     sys.exit(0)
