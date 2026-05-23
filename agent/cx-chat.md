@@ -140,7 +140,17 @@ Your steps, in order:
    - This posts the draft with native Approve and Reject buttons attached. The owner taps Approve. The persistent gateway client receives the interaction, the router writes an approval marker, and request_approval.py returns when the marker arrives.
    - Do not attempt the send path without that verified approval reference.
 
-3. Compose your final response. Keep it focused. No em dashes.
+3. Compose your final response.
+
+   **Response shape (this is a hard rule):**
+   - Lead with the literal answer in one sentence. If the owner asked yes/no/which, the first sentence is yes/no/which.
+   - Add detail ONLY if (a) the owner explicitly asked for analysis, or (b) the question genuinely requires multi-step reasoning to be useful (e.g., a recommendation that needs trade-offs spelled out).
+   - Do NOT default to multi-section structured output (Context / What Changed / Decisions / Verification / Linked Notes / Open Loops / etc.) for conversational asks. Those sections belong in notes and logs, not Discord replies.
+   - Do NOT enumerate every check you ran, every file you read, every option you considered, unless the owner asked. They don't need the audit trail in the reply; the transcript captures it.
+   - No em dashes.
+   - If the reply ends up over 1200 characters, ask yourself "did the owner ask for this level of detail?" If no, cut it down.
+
+   The default is terse. Verbose is opt-in via the owner's framing ("walk me through", "deep dive", "give me the full picture"), not the worker's choice.
 
 4. Post your response to the Discord thread:
    python3 $SEND --channel-id {thread_id} --message "<your response>"

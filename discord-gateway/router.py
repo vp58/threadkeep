@@ -10,9 +10,13 @@ to the right backend by `custom_id` prefix:
 Auth: only interactions where `user.id == config.discord.owner_user_id` are
 honored. Everything else is silently rejected with an ephemeral message.
 
-The router ALWAYS sends an immediate ACK to Discord within the 3-second
-interaction window. The ACK is a deferred update so Discord keeps the message
-visible. The router then PATCHes the message to reflect the final state.
+The router runs the backend action first (sub-second on the success path),
+then ACKs the interaction with a single type 7 (UPDATE_MESSAGE) callback
+that carries the new message content and clears the buttons. This keeps the
+whole interaction in one round-trip and avoids the "this interaction failed"
+client overlay that appears when a deferred-update ACK (type 6) is followed
+only by a plain channels.messages PATCH. On failure the router ACKs with
+type 4 (CHANNEL_MESSAGE_WITH_SOURCE) as an ephemeral error reply.
 """
 from __future__ import annotations
 
@@ -96,25 +100,6 @@ def discord_post(path: str, body: dict[str, Any], token: str) -> tuple[int, str]
         return exc.code, exc.read().decode("utf-8", errors="replace")
 
 
-def discord_patch(path: str, body: dict[str, Any], token: str) -> tuple[int, str]:
-    data = json.dumps(body).encode("utf-8")
-    req = urllib.request.Request(
-        f"{DISCORD_API}{path}",
-        data=data,
-        headers={
-            "Authorization": f"Bot {token}",
-            "Content-Type": "application/json",
-            "User-Agent": "ClaudeDisclawdRouter/0.1",
-        },
-        method="PATCH",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return resp.status, resp.read().decode("utf-8", errors="replace")
-    except urllib.error.HTTPError as exc:
-        return exc.code, exc.read().decode("utf-8", errors="replace")
-
-
 def ack_interaction(interaction_id: str, token_str: str, token: str,
                     response_type: int = INTERACTION_RESPONSE_DEFERRED_UPDATE,
                     payload: dict[str, Any] | None = None) -> tuple[int, str]:
@@ -133,18 +118,6 @@ def send_followup_ephemeral(application_id: str, interaction_token: str,
     return discord_post(
         f"/webhooks/{application_id}/{interaction_token}",
         {"content": content, "flags": EPHEMERAL},
-        token,
-    )
-
-
-def edit_message(channel_id: str, message_id: str, content: str,
-                 token: str, clear_components: bool = True) -> tuple[int, str]:
-    body: dict[str, Any] = {"content": content}
-    if clear_components:
-        body["components"] = []
-    return discord_patch(
-        f"/channels/{channel_id}/messages/{message_id}",
-        body,
         token,
     )
 
@@ -181,10 +154,32 @@ def run_responder(action: str, sha_prefix: str, channel_id: str, message_id: str
     return proc.returncode, (proc.stdout + proc.stderr).strip()
 
 
-def reject_with_message(application_id: str, interaction_token: str, token: str,
+def ack_update_message(interaction_id: str, interaction_token: str, token: str,
+                       new_content: str, logger: logging.Logger) -> int:
+    """ACK type 7 UPDATE_MESSAGE: replace message content and clear buttons.
+
+    A single round-trip that closes the interaction AND rewrites the message
+    body, avoiding the "this interaction failed" overlay caused by the older
+    type 6 (DEFERRED_UPDATE) + separate channels.messages PATCH pattern.
+    """
+    status, body = ack_interaction(
+        interaction_id, interaction_token, token,
+        response_type=INTERACTION_RESPONSE_UPDATE_MESSAGE,
+        payload={"content": new_content[:1900], "components": []},
+    )
+    logger.info("ack(update_message) status=%s body=%s", status, body[:200])
+    return status
+
+
+def reject_with_message(interaction_id: str, interaction_token: str, token: str,
                         reason: str, logger: logging.Logger) -> int:
+    """Failure ACK: ephemeral error reply, no message update."""
     logger.warning("reject: %s", reason)
-    send_followup_ephemeral(application_id, interaction_token, reason, token)
+    ack_interaction(
+        interaction_id, interaction_token, token,
+        response_type=INTERACTION_RESPONSE_CHANNEL_MESSAGE_WITH_SOURCE,
+        payload={"content": reason[:1900], "flags": EPHEMERAL},
+    )
     return 1
 
 
@@ -229,43 +224,43 @@ def handle_interaction(interaction: dict[str, Any], logger: logging.Logger) -> i
     prefix, args = parse_custom_id(custom_id)
     timestamp = datetime.now(timezone.utc).strftime("%H:%M UTC")
 
-    ack_status, ack_body = ack_interaction(
-        interaction_id, interaction_token, token,
-        response_type=INTERACTION_RESPONSE_DEFERRED_UPDATE,
-    )
-    logger.info("ack status=%s body=%s", ack_status, ack_body[:200])
+    # Backend action runs first, then a single UPDATE_MESSAGE ACK closes the
+    # interaction and rewrites the message body in one round-trip. Failure
+    # paths use an ephemeral CHANNEL_MESSAGE_WITH_SOURCE ACK instead.
 
     if prefix == "approve":
         if not args:
-            return reject_with_message(application_id, interaction_token, token,
+            return reject_with_message(interaction_id, interaction_token, token,
                                        "approve: missing sha prefix", logger)
         sha_prefix = args[0]
         rc, out = run_responder("approve", sha_prefix, channel_id, message_id, logger)
         if rc == 0:
             new_content = f"[APPROVED {timestamp}] {original_content}"
-            edit_message(channel_id, message_id, new_content, token)
+            ack_update_message(interaction_id, interaction_token, token,
+                               new_content, logger)
             send_followup_ephemeral(application_id, interaction_token,
                                     f"Approved sha:{sha_prefix}", token)
             return 0
-        return reject_with_message(application_id, interaction_token, token,
+        return reject_with_message(interaction_id, interaction_token, token,
                                    f"approve failed: {out[:200]}", logger)
 
     if prefix == "reject":
         if not args:
-            return reject_with_message(application_id, interaction_token, token,
+            return reject_with_message(interaction_id, interaction_token, token,
                                        "reject: missing sha prefix", logger)
         sha_prefix = args[0]
         rc, out = run_responder("reject", sha_prefix, channel_id, message_id, logger)
         if rc == 0:
             new_content = f"[REJECTED {timestamp}] {original_content}"
-            edit_message(channel_id, message_id, new_content, token)
+            ack_update_message(interaction_id, interaction_token, token,
+                               new_content, logger)
             send_followup_ephemeral(application_id, interaction_token,
                                     f"Rejected sha:{sha_prefix}", token)
             return 0
-        return reject_with_message(application_id, interaction_token, token,
+        return reject_with_message(interaction_id, interaction_token, token,
                                    f"reject failed: {out[:200]}", logger)
 
-    return reject_with_message(application_id, interaction_token, token,
+    return reject_with_message(interaction_id, interaction_token, token,
                                f"unknown custom_id prefix: {prefix}", logger)
 
 
