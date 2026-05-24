@@ -54,7 +54,9 @@ Pre-release. The original private deployment has been running unattended since 2
 
 ## Architecture
 
-- `agent/cx-chat.md` is the listener prompt. Drop it into your Claude Code session as the identity for the listening process. The healthcheck handles this automatically once installed.
+- `cx-chat-listener/CLAUDE.md` is the listener identity, auto-loaded by Claude Code because the tmux session is started with cwd set to that subdir. It is the same content as `agent/cx-chat.md` and is re-asserted after `/compact` and `/clear` (which fixes the identity-loss bug where the listener forgot its protocol after the first compaction).
+- `cx-chat-listener/hooks/precompact-identity.sh` and `cx-chat-listener/hooks/userpromptsubmit-anchor.sh` are user-scoped Claude Code hooks that defend identity across compaction and per-message. See `docs/SETUP.md` step 6 for the registration block.
+- `agent/cx-chat.md` is the canonical reference copy of the listener prompt (same content as the cwd CLAUDE.md). Kept for documentation and for tools that want to read the protocol without resolving discovery rules.
 - `conversations/` holds the dispatch script and CLI. The dispatch script handles all deterministic state changes per inbound message.
 - `discord-gateway/` is an optional but recommended companion: a persistent WebSocket client that delivers Discord button presses to a small router, which writes approval markers to disk. The marker watcher then runs out-of-band outbound work.
 - `approval/` is the worker-facing API for requesting an outbound approval via Discord buttons.

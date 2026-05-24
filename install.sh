@@ -291,6 +291,20 @@ bootstrap_agents() {
   done
 }
 
+verify_listener_cwd() {
+  # The cx-chat-listener subdir is shipped in the repo. Its CLAUDE.md is the
+  # primary mechanism that survives /compact and /clear. Verify it exists
+  # before starting the tmux session so we fail loudly on an old checkout.
+  local listener_cwd="$REPO_ROOT/cx-chat-listener"
+  if [ ! -f "$listener_cwd/CLAUDE.md" ]; then
+    yellow "  WARN: $listener_cwd/CLAUDE.md missing. Identity persistence across"
+    yellow "        /compact will be degraded. Run 'git pull' on the repo to fix."
+    return 1
+  fi
+  green "  Listener cwd verified at $listener_cwd"
+  return 0
+}
+
 start_listener_session() {
   if [ "$SCRATCH" = "1" ]; then
     yellow "  --scratch mode: skipping tmux listener start."
@@ -302,10 +316,20 @@ start_listener_session() {
     return 0
   fi
   # The healthcheck will start the session on its next tick. We can also
-  # start it directly now via the launcher.
+  # start it directly now via the launcher. Always start with cwd at the
+  # cx-chat-listener subdir so Claude Code auto-loads its CLAUDE.md, which
+  # is what re-asserts identity after /compact and /clear.
+  local listener_cwd="$REPO_ROOT/cx-chat-listener"
+  local launch_cwd
+  if [ -d "$listener_cwd" ]; then
+    launch_cwd="$listener_cwd"
+  else
+    launch_cwd="$REPO_ROOT"
+    yellow "  WARN: $listener_cwd missing, launching from repo root instead."
+  fi
   if [ -x "$REPO_ROOT/cx-launcher.sh" ]; then
-    tmux new-session -d -s "$TMUX_SESSION" -c "$REPO_ROOT" "$REPO_ROOT/cx-launcher.sh"
-    green "  Started tmux session '$TMUX_SESSION'."
+    tmux new-session -d -s "$TMUX_SESSION" -c "$launch_cwd" "$REPO_ROOT/cx-launcher.sh"
+    green "  Started tmux session '$TMUX_SESSION' (cwd=$launch_cwd)."
   else
     yellow "  cx-launcher.sh not executable. Healthcheck will retry on next tick."
   fi
@@ -367,6 +391,7 @@ main() {
   resolve_bot_token
   store_token_in_keychain
   write_config_toml
+  verify_listener_cwd || true
   install_plists
   bootstrap_agents
   start_listener_session

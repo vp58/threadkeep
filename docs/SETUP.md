@@ -83,7 +83,54 @@ If anything is off, see the troubleshooting section below.
 
 If your worker needs to send Slack messages or emails on your behalf, see `docs/ARCHITECTURE.md` for the marker watcher protocol. You write a small adapter script that accepts `--pending-json`, calls your provider, and prints JSON. Set the path via `THREADKEEP_SLACK_GATE` or `THREADKEEP_EMAIL_GATE` and the marker watcher will route approved sends through it.
 
-## 6. Uninstall
+## 6. Identity persistence across /compact
+
+The listener loads its protocol from `cx-chat-listener/CLAUDE.md`. The tmux session is started with cwd set to that subdir so Claude Code auto-loads the file on init and re-asserts it after `/compact` and `/clear`. Without this, the listener loses its agent identity after the first compaction and starts replying inline to top-level posts instead of running dispatch.py and spawning a worker.
+
+Three layers protect identity:
+
+1. **Primary: `cx-chat-listener/CLAUDE.md`.** Claude Code walks UP from cwd and loads every `CLAUDE.md` it finds. Place the listener identity in the cwd, place any host-specific rules in a parent dir (e.g. your home `CLAUDE.md`). Both load. The cwd file is re-asserted after `/compact` and `/clear`.
+
+2. **Secondary: PreCompact hook** (`cx-chat-listener/hooks/precompact-identity.sh`). Fires right before `/compact` runs and emits the identity file verbatim via `hookSpecificOutput.additionalContext`, which Claude Code injects into the compaction summary. Guarantees the protocol survives even if the cwd CLAUDE.md mechanism is bypassed.
+
+3. **Tertiary: UserPromptSubmit hook** (`cx-chat-listener/hooks/userpromptsubmit-anchor.sh`). Fires on every user prompt and injects a one-line reminder ("you are cx-chat, top-level posts go through dispatch.py, never reply inline"). Cheap per-message belt-and-suspenders.
+
+Both hooks gate on cwd so they only run for the listener session. Other Claude Code sessions you run from elsewhere on the same machine are unaffected.
+
+To register the hooks, add this to your user-scoped `~/.claude/settings.local.json` (merge with any existing `hooks` block):
+
+```json
+{
+  "hooks": {
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "<absolute-path-to-repo>/cx-chat-listener/hooks/precompact-identity.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "<absolute-path-to-repo>/cx-chat-listener/hooks/userpromptsubmit-anchor.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Replace `<absolute-path-to-repo>` with the value of `$THREADKEEP_REPO_ROOT` you set during install.
+
+Hooks are user-scoped (in `~/.claude/settings.local.json`), not repo-scoped, because Claude Code requires hook commands to live at the user level for trust. The hooks themselves live in the repo so they ship with the code.
+
+## 7. Uninstall
 
 ```
 bash uninstall.sh

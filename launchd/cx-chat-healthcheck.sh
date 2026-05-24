@@ -58,12 +58,26 @@ post_alert() {
 }
 
 start_cx_chat() {
-  log "Starting $SESSION tmux session via $LAUNCHER"
+  # Launch tmux with cwd set to the cx-chat-listener subdir so Claude Code
+  # auto-loads cx-chat-listener/CLAUDE.md on init AND re-asserts it after
+  # /compact and /clear. Any CLAUDE.md in parent dirs is still loaded via
+  # parent-walk discovery. If the subdir is missing (older install), fall
+  # back to the repo root so the launch still succeeds.
+  local listener_cwd="$REPO_ROOT/cx-chat-listener"
+  local cwd
+  if [ -d "$listener_cwd" ]; then
+    cwd="$listener_cwd"
+  else
+    cwd="$REPO_ROOT"
+    log "WARN: $listener_cwd missing, falling back to repo root cwd"
+  fi
+
+  log "Starting $SESSION tmux session via $LAUNCHER (cwd=$cwd)"
   if [ ! -x "$LAUNCHER" ]; then
     log "ERROR: launcher not executable at $LAUNCHER"
     return 1
   fi
-  tmux new-session -d -s "$SESSION" -c "$WORKSPACE_ROOT" "$LAUNCHER" 2>>"$LOG"
+  tmux new-session -d -s "$SESSION" -c "$cwd" "$LAUNCHER" 2>>"$LOG"
   if [ $? -ne 0 ]; then
     log "ERROR: tmux new-session failed"
     return 1
@@ -71,7 +85,11 @@ start_cx_chat() {
   log "tmux session started; sleeping 15s for Claude Code init"
   sleep 15
 
-  local prompt="You are cx-chat. Read your full protocol at $REPO_ROOT/agent/cx-chat.md right now and follow it for every inbound Discord message in channel $CHAT_CHANNEL. Confirm in one line you have the protocol, then listen."
+  # Belt-and-suspenders bootstrap prompt. The cwd CLAUDE.md is the primary
+  # identity mechanism, but this also re-asserts the protocol immediately
+  # in case the user has Claude Code starting in a mode that skips
+  # auto-loading on first turn.
+  local prompt="You are the Threadkeep cx-chat listener. Your identity is in $cwd/CLAUDE.md (auto-loaded). Follow it for every inbound Discord message in channel $CHAT_CHANNEL. Confirm in one line you have the protocol, then listen."
   tmux send-keys -t "$SESSION" "$prompt" Enter
   sleep 2
   tmux send-keys -t "$SESSION" Enter
