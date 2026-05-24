@@ -1,0 +1,23 @@
+# Install-generated files
+config.toml
+.threadkeep.env
+.env
+
+# Runtime data
+discord-gateway/logs/
+discord-gateway/state/
+discord-gateway/approvals/
+discord-gateway/pending/
+discord-gateway/completed/
+discord-gateway/failed/
+discord-gateway/processed-markers/
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# OS
+.DS_Store

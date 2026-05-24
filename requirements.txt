@@ -1,0 +1,9 @@
+# Threadkeep Python runtime dependencies.
+#
+# The project deliberately keeps third-party deps to a minimum. The only
+# required runtime dependency is `websockets` for the Discord gateway client.
+# Everything else (HTTP, JSON, TOML parsing, scheduling, file IO) is stdlib.
+#
+# Python 3.11 or newer is required (uses tomllib from the standard library).
+
+websockets>=12.0
