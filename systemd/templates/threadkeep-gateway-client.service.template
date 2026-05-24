@@ -1,14 +1,15 @@
 [Unit]
-Description=Claude Disclawd Discord Gateway Client
+Description=Threadkeep Discord Gateway Client
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-Environment="DISCLAWD_CONFIG=__REPO_ROOT__/config.toml"
+Environment="THREADKEEP_REPO_ROOT=__REPO_ROOT__"
+Environment="THREADKEEP_CONFIG=__REPO_ROOT__/config.toml"
 Environment="PYTHONUNBUFFERED=1"
 WorkingDirectory=__REPO_ROOT__
-ExecStart=/usr/bin/python3 __REPO_ROOT__/discord-gateway/client.py
+ExecStart=__PYTHON_BIN__ __REPO_ROOT__/discord-gateway/client.py
 Restart=on-failure
 RestartSec=10
 StandardOutput=append:__REPO_ROOT__/discord-gateway/logs/launchd.stdout.log

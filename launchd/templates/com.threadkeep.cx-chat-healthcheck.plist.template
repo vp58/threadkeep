@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.disclawd.cx-chat-healthcheck</string>
+    <string>__LABEL__</string>
 
     <key>ProgramArguments</key>
     <array>
@@ -28,8 +28,12 @@
         <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
         <key>HOME</key>
         <string>__HOME__</string>
-        <key>DISCLAWD_CONFIG</key>
+        <key>THREADKEEP_REPO_ROOT</key>
+        <string>__REPO_ROOT__</string>
+        <key>THREADKEEP_CONFIG</key>
         <string>__REPO_ROOT__/config.toml</string>
+        <key>THREADKEEP_TMUX_SESSION</key>
+        <string>__TMUX_SESSION__</string>
     </dict>
 </dict>
 </plist>
