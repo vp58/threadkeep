@@ -1,0 +1,58 @@
+name: Bug report
+description: Report something that is not working as expected
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What is the bug, in one or two sentences.
+      placeholder: The listener stops responding after the first /compact.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. Run `bash install.sh`
+        2. Post a message in the listen channel
+        3. Run `/compact` in the listener tmux session
+        4. Post another message
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What actually happened. Paste log excerpts if useful.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python version, Discord plugin version, Threadkeep commit sha.
+      placeholder: |
+        OS: macOS 26.4 (Tahoe)
+        Python: 3.14.3
+        Discord plugin: 0.x.y
+        Threadkeep commit: abc1234
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Anything else relevant. Screenshots, related issues, prior workarounds.
+    validations:
+      required: false

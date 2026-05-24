@@ -12,7 +12,19 @@ Open a GitHub issue at https://github.com/vp58/threadkeep/issues. Please include
 - Your OS, Python version, and Claude Code version
 - Relevant log excerpts from `discord-gateway/logs/` or the listener tmux session
 
-If the issue is security-related, do not file a public issue. See `SECURITY.md` for the disclosure flow.
+If the issue is security-related, do not file a public issue. See `docs/SECURITY.md` for the disclosure flow.
+
+## Pull request flow
+
+This is a public open source project, so changes go through the normal pull request flow. Direct pushes to `main` are discouraged, even from maintainers.
+
+1. Fork the repo (or, if you have write access, create a branch off `main` in this repo).
+2. Use a descriptive branch name like `feat/short-summary`, `fix/short-summary`, or `docs/short-summary`.
+3. Make your change in focused commits.
+4. Push the branch and open a pull request against `main`.
+5. Fill in the PR template (`.github/PULL_REQUEST_TEMPLATE.md`). Describe what changed and why, and call out anything reviewers should look at closely.
+6. One reviewer approval is enough to merge. Trivial documentation-only PRs from maintainers may self-merge.
+7. Squash or rebase is fine. Keep the history readable.
 
 ## Proposing a change
 
@@ -35,10 +47,10 @@ Small, focused pull requests are easier to review than large ones. If you have a
 
 ## Testing
 
-The test suite under `discord-gateway/tests/` uses pytest. Run:
+The test suite under `discord-gateway/tests/` uses the Python standard library `unittest` module. Run:
 
 ```
-python3 -m pytest discord-gateway/tests/
+python3 -m unittest discover -s discord-gateway/tests -t discord-gateway -v
 ```
 
 These tests mock Discord and the filesystem. There is no live integration test in the standard suite.
