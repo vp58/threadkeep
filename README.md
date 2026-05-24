@@ -4,6 +4,8 @@ Persistent Discord conversation orchestrator for Claude Code.
 
 A single Claude Code session listens to one Discord channel, creates a durable markdown record of every conversation, and dispatches the actual work to background subagents. The listener stays responsive while threads run in parallel.
 
+Contributions welcome. See `CONTRIBUTING.md` for the PR flow, issue templates, and code style.
+
 ## Install
 
 ```
