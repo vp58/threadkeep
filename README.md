@@ -4,6 +4,19 @@ Persistent Discord conversation orchestrator for Claude Code.
 
 A single Claude Code session listens to one Discord channel, creates a durable markdown record of every conversation, and dispatches the actual work to background subagents. The listener stays responsive while threads run in parallel.
 
+## Install
+
+```
+git clone https://github.com/vp58/threadkeep.git ~/.threadkeep
+cd ~/.threadkeep
+python3 -m pip install -r requirements.txt
+bash install.sh
+```
+
+The installer is interactive. It will prompt you for your Discord listen channel id, errors channel id, owner user id, timezone, and bot token, then store the token in the macOS Keychain, render the launchd plists, and start the listener tmux session. Full walkthrough in `docs/SETUP.md`.
+
+Uninstall with `bash uninstall.sh`.
+
 ## What it does
 
 1. You post a message in your configured Discord channel.
@@ -26,46 +39,67 @@ The Claude Code Discord plugin gives you a great single-channel interface but th
 - Channel-ownership filter. The bot only acts on messages in the configured listen channel or in threads it created.
 - Native Discord Approve and Reject buttons for outbound sends. The optional gateway client and marker watcher daemon let workers gate outbound email and Slack sends behind a Discord tap.
 - launchd templates for macOS, systemd templates for Linux.
+- Idempotent installer with first-class uninstall.
 
 ## Status
 
-Pre-release. Code has been running unattended on a single user's setup since 2026-05-21 handling parallel conversations end to end. The parameterization and public install path is new and has not yet been tested by anyone except the original author.
+Pre-release. The original private deployment has been running unattended since 2026-05-21 handling parallel conversations end to end. The public install path (install.sh, uninstall.sh, plist templates, Keychain integration) was added on 2026-05-23 and is freshly tested but has not yet been tried by users other than the original author.
 
-## Quick start
+## Tested on
 
-Full setup is in `docs/SETUP.md`. The short version:
-
-1. Clone this repo.
-2. Copy `.env.example` to `config.toml` and fill in your Discord listen channel id, errors channel id, owner user id, and timezone.
-3. Set the `DISCORD_BOT_TOKEN` environment variable to your bot token, or set `discord.token_file` in `config.toml`.
-4. Install dependencies: `python3 -m pip install -r requirements.txt`
-5. On macOS: `bash install.sh` to install the launchd agents.
-6. On Linux: copy the unit files from `systemd/templates/` to `~/.config/systemd/user/` and run `systemctl --user enable --now`.
-7. Start your Claude Code session with the Discord plugin attached. The listener will pick up new messages.
+- macOS 26.4 (Tahoe), Python 3.14.3, websockets 16.0
+- macOS 15 (Sequoia) is expected to work but is not regularly tested
+- macOS 14 (Sonoma) is expected to work but is not regularly tested
+- Linux: see the sketch at the bottom of `docs/SETUP.md`. The systemd templates are shipped but the install script is macOS-specific.
 
 ## Architecture
 
-- `agent/cx-chat.md` is the listener prompt. Drop it into your Claude Code session as the identity for the listening process.
+- `agent/cx-chat.md` is the listener prompt. Drop it into your Claude Code session as the identity for the listening process. The healthcheck handles this automatically once installed.
 - `conversations/` holds the dispatch script and CLI. The dispatch script handles all deterministic state changes per inbound message.
-- `discord-gateway/` is an optional but recommended companion: a persistent WebSocket client that delivers Discord button presses to a small router, which writes approval markers to disk.
+- `discord-gateway/` is an optional but recommended companion: a persistent WebSocket client that delivers Discord button presses to a small router, which writes approval markers to disk. The marker watcher then runs out-of-band outbound work.
 - `approval/` is the worker-facing API for requesting an outbound approval via Discord buttons.
 - `hooks/outbound-send-gate-hook.sh` is a Claude Code PreToolUse hook that refuses outbound gate calls without a verified approval reference.
-- `launchd/` and `systemd/` ship templates for keeping all of this running unattended.
+- `hooks/discord-file-gate.sh` is a Claude Code PreToolUse hook that restricts file attachments in Discord replies to an explicit allowlist of directory prefixes.
+- `launchd/templates/*.plist.template` are rendered by install.sh with `__REPO_ROOT__`, `__HOME__`, `__PYTHON_BIN__`, `__LABEL__`, and `__TMUX_SESSION__` substitutions.
+- `systemd/templates/*.service.template` are the Linux equivalents.
 
-See `docs/ARCHITECTURE.md` for the full diagram.
+See `docs/ARCHITECTURE.md` for the full diagram and the conversation + approval lifecycles.
 
 ## Configuration
 
 All configuration lives in one `config.toml` file or in environment variables prefixed with `THREADKEEP_`. The repo never reads secrets from the filesystem outside of optional token files you explicitly point at. See `.env.example` for the full set of options.
 
+The bot token is stored separately in the macOS Keychain (service `threadkeep-secret`, account `discord-bot-token`) and never lands on disk in plaintext.
+
+## Run from source (developers)
+
+```
+git clone https://github.com/vp58/threadkeep.git
+cd threadkeep
+python3 -m pip install -r requirements.txt
+python3 -m unittest discover -s discord-gateway/tests -t discord-gateway -v
+```
+
+To run the daemons by hand without launchd:
+
+```
+export DISCORD_BOT_TOKEN=...
+cp config.example.toml config.toml
+# edit config.toml with your channel ids
+python3 discord-gateway/client.py &
+python3 discord-gateway/marker-watcher.py &
+bash cx-launcher.sh   # opens Claude Code with Discord plugin in foreground
+```
+
 ## Security
 
 - Inbound Discord messages are untrusted input. The worker prompt treats them as such.
 - The listener filters by channel ownership before dispatching. Messages in channels Threadkeep does not own are ignored.
+- The router refuses interactions from any user other than the configured owner.
 - Outbound sends require explicit owner approval via Discord buttons or a typed sha confirmation.
 - The default install does not enable `--dangerously-skip-permissions` for the worker. Permission prompts will surface in your Claude Code UI.
 
-See `docs/SECURITY.md` for the threat model and disclosure policy.
+See `docs/SECURITY.md` for the full trust model and disclosure flow.
 
 ## License
 
