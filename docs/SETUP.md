@@ -13,7 +13,23 @@ End-to-end install for a fresh machine. Tested on macOS 14, 15, and 26 (Sonoma, 
 
 The bot must be invited to the server with these scopes: `bot`, `applications.commands`. Required permissions: Read Messages, Send Messages, Create Public Threads, Manage Threads, Add Reactions.
 
-## 1. Clone the repo and install Python deps
+## 1. Create a Discord bot
+
+If you already have a bot token, skip to step 2.
+
+1. Open https://discord.com/developers/applications.
+2. Create a new application named `Threadkeep`.
+3. Open the Bot tab and create a bot user.
+4. Copy the bot token. Treat it like a password. The installer stores it in macOS Keychain.
+5. Open OAuth2 > URL Generator.
+6. Select scopes `bot` and `applications.commands`.
+7. Select bot permissions: Read Messages, Send Messages, Create Public Threads, Manage Threads, Add Reactions.
+8. Open the generated URL and invite the bot to your server.
+9. In Discord, enable Developer Mode, then copy your listen channel id, errors channel id, and your own user id.
+
+The bot does not need administrator permission.
+
+## 2. Clone the repo and install Python deps
 
 ```
 git clone https://github.com/vp58/threadkeep.git ~/.threadkeep
@@ -23,7 +39,7 @@ python3 -m pip install -r requirements.txt
 
 Python 3.11 or newer is required. Threadkeep uses the stdlib `tomllib` module.
 
-## 2. Run the installer
+## 3. Run the installer
 
 ```
 bash install.sh
@@ -45,7 +61,7 @@ The installer is interactive. It will:
 9. Bootstrap the agents with `launchctl bootstrap`.
 10. Start the listener tmux session via `cx-launcher.sh`.
 
-## 3. Verify
+## 4. Verify
 
 The healthcheck started a tmux session named `threadkeep-chat`. Attach to it:
 
@@ -72,18 +88,18 @@ Send a test message in the listen channel. The listener should:
 
 If anything is off, see the troubleshooting section below.
 
-## 4. Configuration files at a glance
+## 5. Configuration files at a glance
 
 - `config.toml`: paths, channel ids, owner user id, runtime knobs (timezone, rate limits).
 - `~/Library/LaunchAgents/com.threadkeep.*.plist`: the rendered plists. Edit these only if you know what you are doing. The originals are in `launchd/templates/`.
 - `~/.threadkeep/conversations/`: source of truth for every conversation, stored as markdown.
 - `~/.threadkeep/discord-gateway/logs/`: client.log, router.log, marker-watcher.log. Tail these when debugging.
 
-## 5. Optional: outbound send gates
+## 6. Optional: outbound send gates
 
-If your worker needs to send Slack messages or emails on your behalf, see `docs/ARCHITECTURE.md` for the marker watcher protocol. You write a small adapter script that accepts `--pending-json`, calls your provider, and prints JSON. Set the path via `THREADKEEP_SLACK_GATE` or `THREADKEEP_EMAIL_GATE` and the marker watcher will route approved sends through it.
+If your worker needs to send Slack messages or emails on your behalf, see `docs/ARCHITECTURE.md` for the marker watcher protocol. You write a small adapter script that accepts `--pending-json`, calls your provider, and prints JSON. Set the path via `THREADKEEP_SLACK_GATE` or `THREADKEEP_EMAIL_GATE` and the marker watcher will route approved sends through it. See `examples/slack_gate.py` for the minimal adapter shape.
 
-## 6. Identity persistence across /compact
+## 7. Identity persistence across /compact
 
 The listener loads its protocol from `cx-chat-listener/CLAUDE.md`. The tmux session is started with cwd set to that subdir so Claude Code auto-loads the file on init and re-asserts it after `/compact` and `/clear`. Without this, the listener loses its agent identity after the first compaction and starts replying inline to top-level posts instead of running dispatch.py and spawning a worker.
 
@@ -130,7 +146,7 @@ Replace `<absolute-path-to-repo>` with the value of `$THREADKEEP_REPO_ROOT` you 
 
 Hooks are user-scoped (in `~/.claude/settings.local.json`), not repo-scoped, because Claude Code requires hook commands to live at the user level for trust. The hooks themselves live in the repo so they ship with the code.
 
-## 7. Uninstall
+## 8. Uninstall
 
 ```
 bash uninstall.sh

@@ -1,10 +1,29 @@
 # Threadkeep
 
+![Tests](https://github.com/vp58/threadkeep/actions/workflows/test.yml/badge.svg)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Status](https://img.shields.io/badge/status-pre--release-orange)
+
 Persistent Discord conversation orchestrator for Claude Code.
 
 A single Claude Code session listens to one Discord channel, creates a durable markdown record of every conversation, and dispatches the actual work to background subagents. The listener stays responsive while threads run in parallel.
 
 Contributions welcome. See `CONTRIBUTING.md` for the PR flow, issue templates, and code style.
+
+## Contents
+
+- [Install](#install)
+- [First walkthrough](#first-walkthrough)
+- [What it does](#what-it-does)
+- [Why this exists](#why-this-exists)
+- [Features](#features)
+- [Status](#status)
+- [Architecture](#architecture)
+- [Configuration](#configuration)
+- [Run from source](#run-from-source-developers)
+- [Security](#security)
+- [License](#license)
 
 ## Install
 
@@ -18,6 +37,24 @@ bash install.sh
 The installer is interactive. It will prompt you for your Discord listen channel id, errors channel id, owner user id, timezone, and bot token, then store the token in the macOS Keychain, render the launchd plists, and start the listener tmux session. Full walkthrough in `docs/SETUP.md`.
 
 Uninstall with `bash uninstall.sh`.
+
+## First walkthrough
+
+After install, post this in your configured Discord listen channel:
+
+```
+Make a tiny checklist for testing Threadkeep.
+```
+
+Expected result:
+
+1. The listener reacts to the message.
+2. A Discord thread appears under your message.
+3. A markdown conversation file is created under your configured workspace.
+4. A worker replies in the thread with the checklist.
+5. If you reply in the thread, the next worker receives the prior transcript.
+
+If nothing happens, attach to `tmux attach -t threadkeep-chat` and check `~/.threadkeep/discord-gateway/logs/client.log`.
 
 ## What it does
 
@@ -43,9 +80,17 @@ The Claude Code Discord plugin gives you a great single-channel interface but th
 - launchd templates for macOS, systemd templates for Linux.
 - Idempotent installer with first-class uninstall.
 
+## Documentation
+
+- `docs/SETUP.md`: install, Discord bot setup, verification, troubleshooting, and Linux sketch.
+- `docs/ARCHITECTURE.md`: listener, dispatcher, approval gateway, marker watcher, and data flow.
+- `docs/SECURITY.md`: trust model, outbound gates, token handling, and disclosure flow.
+- `docs/FAQ.md`: common setup and operations questions.
+- `examples/slack_gate.py`: minimal outbound adapter shape for marker watcher integrations.
+
 ## Status
 
-Pre-release. The original private deployment has been running unattended since 2026-05-21 handling parallel conversations end to end. The public install path (install.sh, uninstall.sh, plist templates, Keychain integration) was added on 2026-05-23 and is freshly tested but has not yet been tried by users other than the original author.
+Pre-release. The original private deployment has been running unattended since 2026-05-21 handling parallel conversations end to end. The public install path (install.sh, uninstall.sh, plist templates, Keychain integration) was added on 2026-05-23 and has been tested by the original author.
 
 ## Tested on
 
@@ -108,6 +153,10 @@ See `docs/SECURITY.md` for the full trust model and disclosure flow.
 ## License
 
 MIT. See `LICENSE`.
+
+## Changelog
+
+See `CHANGELOG.md`.
 
 ## Acknowledgments
 
