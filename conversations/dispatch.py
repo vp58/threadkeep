@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import uuid
@@ -34,8 +35,23 @@ _HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(_HERE))
 import lib  # noqa: E402
 
+# Idempotency ledger (keyed on message_id). ADDITIVE and fail-open: if the module
+# or its DB is unavailable, dispatch.py behaves exactly as it did before. A
+# repeated message_id (retry, replayed burst, crash-recovery re-drain) replays
+# the SAME JSON and does NOT re-create the thread or re-append the transcript.
+try:
+    sys.path.insert(0, str(_HERE / "queue"))
+    import idempotency as _idem  # noqa: E402
+except Exception:  # pragma: no cover - defensive, keep live path alive
+    _idem = None
+
 DISCORD_DIR = _HERE.parent / "discord-gateway"
-APPROVAL_DIR = _HERE.parent / "approval"
+# Directory holding the Discord helper scripts (send_message.py, create_thread.py,
+# react.py). Defaults to the repo's approval/ dir; THREADKEEP_DISCORD_SCRIPTS lets
+# a test harness inject fakes so dispatch can be exercised with no real API calls.
+APPROVAL_DIR = Path(
+    os.environ.get("THREADKEEP_DISCORD_SCRIPTS", str(_HERE.parent / "approval"))
+).expanduser()
 SEND_MESSAGE = APPROVAL_DIR / "send_message.py"
 CREATE_THREAD = APPROVAL_DIR / "create_thread.py"
 REACT = APPROVAL_DIR / "react.py"
@@ -86,6 +102,15 @@ def create_convo(title: str, thread_id: str, session_id: str) -> None:
 
 
 def cmd_top_level(args: argparse.Namespace) -> int:
+    # Idempotency guard: if this exact message_id was already dispatched, replay
+    # the SAME JSON and exit 0. No second thread, no second transcript append, no
+    # second eye reaction.
+    if _idem is not None:
+        prior = _idem.lookup(args.message_id)
+        if prior is not None:
+            print(json.dumps(prior))
+            return 0
+
     session_id = str(uuid.uuid4())
 
     thread_id = create_thread_in_chat(args.channel_id, args.message_id, args.title)
@@ -94,7 +119,7 @@ def cmd_top_level(args: argparse.Namespace) -> int:
     react_eyes(args.channel_id, args.message_id)
 
     convo_path = lib.conversation_path(session_id, status="active")
-    print(json.dumps({
+    result = {
         "mode": "top-level",
         "session_id": session_id,
         "thread_id": thread_id,
@@ -102,11 +127,22 @@ def cmd_top_level(args: argparse.Namespace) -> int:
         "title": args.title,
         "convo_path": str(convo_path),
         "is_new": True,
-    }))
+    }
+    if _idem is not None:
+        _idem.record(args.message_id, "top-level", result)
+    print(json.dumps(result))
     return 0
 
 
 def cmd_reply(args: argparse.Namespace) -> int:
+    # Idempotency guard: a repeated reply message_id must NOT append the user's
+    # turn a second time or re-ack. Replay the stored JSON.
+    if _idem is not None:
+        prior = _idem.lookup(args.message_id)
+        if prior is not None:
+            print(json.dumps(prior))
+            return 0
+
     session_id = thread_lookup(args.thread_id)
     if not session_id:
         print(json.dumps({"error": f"no conversation registered for thread {args.thread_id}"}),
@@ -117,7 +153,7 @@ def cmd_reply(args: argparse.Namespace) -> int:
     react_eyes(args.thread_id, args.message_id)
 
     fm, _, path = lib.load_conversation(session_id)
-    print(json.dumps({
+    result = {
         "mode": "reply",
         "session_id": session_id,
         "thread_id": args.thread_id,
@@ -125,7 +161,10 @@ def cmd_reply(args: argparse.Namespace) -> int:
         "title": fm.get("title", "(untitled)"),
         "convo_path": str(path),
         "is_new": False,
-    }))
+    }
+    if _idem is not None:
+        _idem.record(args.message_id, "reply", result)
+    print(json.dumps(result))
     return 0
 
 
