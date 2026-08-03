@@ -28,6 +28,10 @@ DISPATCH=$REPO_ROOT/conversations/dispatch.py
 CONVO=$REPO_ROOT/conversations/cli.py
 SEND=$REPO_ROOT/approval/send_message.py
 REQUEST_APPROVAL=$REPO_ROOT/approval/request_approval.py
+
+# Queue-first intake + drainer (see conversations/queue/README.md)
+INTAKE=$REPO_ROOT/conversations/queue/intake.py
+DRAINER=$REPO_ROOT/conversations/queue/drainer.py
 ```
 
 ## Discord message anatomy
@@ -53,9 +57,61 @@ When a message is confusing, ambiguous, or a token does not fit the context, BEF
 
 This rule lives in this file (rather than only in a worker prompt) so the listener never loses it across `/compact` or `/clear`. Pass the same awareness to every worker you spawn.
 
-## STOP CHECK (read this first, every message)
+## QUEUE-FIRST INTAKE + DRAINER (primary path, read this first)
 
-This is the single most important reliability rule. **Both top-level posts and thread replies REQUIRE dispatch.py. Spawning a worker without first running dispatch.py is a protocol violation.**
+The ack (eye reaction) and the durable record of an inbound message no longer depend on the listener LLM reasoning first. The instant ANY message reaches you in the listen channel or an owned thread, before any thinking, titling, or classification, your FIRST action is one deterministic intake call. Then you drain the queue. This is the burst-safe path. The legacy "call dispatch.py directly" mechanics (Sections B/C) still run underneath, because the drainer calls dispatch.py, which is idempotent on `message_id`, so nothing about thread creation, transcripts, eye reactions, or the worker template changes. What changes is the ORDER: enqueue plus ack first (no LLM), reason second.
+
+Full design and configuration: `conversations/queue/README.md`.
+
+### Step 1: INTAKE FIRST (deterministic, no reasoning)
+
+For every inbound message, run intake as your first Bash call, passing the message's `message_id`, `chat_id`, `body`, and `user` straight from the `<channel ...>` tag:
+
+```
+python3 -c "import sys; sys.path.insert(0,'$REPO_ROOT/conversations/queue'); import intake; print(intake.handle_inbound(message_id='<message_id>', chat_id='<chat_id>', body='''<body>''', user='<user>'))"
+```
+
+This adds the eye reaction AND durably records the message keyed on `message_id`, with NO LLM in the path. It is idempotent: re-running for the same `message_id` does not double-ack or double-record. After it returns, the human has their eye and the message survives a crash, compaction, or reboot. Do this even for short pings. Only skip it for messages you do not own (the Section 0.5 ownership filter still applies; when unsure, intake it anyway and let the drainer classify it `unowned` and dead-letter it).
+
+### Step 2: DRAIN (claim, classify, dispatch)
+
+After intake:
+
+```
+python3 $DRAINER drain-one
+```
+
+This claims the oldest ready row (per-thread ordered, one-in-flight per thread) and returns JSON: `message_id`, `chat_id`, `kind` (`top-level` | `reply` | `unowned`), `needs_title`. Then:
+
+- `kind == "unowned"`: not yours. `python3 $DRAINER mark-errored --message-id <id> --error "unowned thread"` and STOP (no reply, no dispatch).
+- `kind == "top-level"` and `needs_title` true: generate the 4-7 word title yourself (your only reasoning job here), then `python3 $DRAINER dispatch-claimed --message-id <id> --title "<title>"`.
+- `kind == "reply"`: `python3 $DRAINER dispatch-claimed --message-id <id>` (no title).
+
+`dispatch-claimed` runs the idempotent dispatch.py (creates/binds the thread, appends the user turn, marks the row dispatched) and prints the same JSON you already use: `session_id`, `thread_id`, `title`, `convo_path`. A `/convo ...` CLI verb (Section A) is handled inline and does NOT need a drain past intake.
+
+### Step 3: SPAWN, then mark
+
+With the dispatch JSON:
+
+1. Spawn the worker subagent via the Agent tool, `run_in_background: true`, using the worker prompt template below.
+2. `python3 $DRAINER mark-spawned --message-id <id>`.
+3. STOP. The worker runs async; you return to listening.
+
+### Burst handling
+
+If several messages arrived while you were busy, repeat Step 2 (`drain-one`) in a loop until it returns `null`, intaking each NEW inbound message first. `drain-one` hands back rows oldest-first and never two-in-flight per thread, so per-thread order is preserved automatically. You do NOT need to manually serialize: intake already acked every message the instant it landed.
+
+### On a fresh session / after a restart or compaction
+
+Run `python3 $DRAINER replay` once. It re-arms any stale claims and lists non-terminal rows left by a crash so nothing inbound is silently lost. Then resume the drain loop.
+
+### Fallback
+
+If the queue/intake is unavailable (e.g. the mq DB is unreachable), fall back to the legacy path: run the dispatch.py mechanics in Sections B/C by hand. That is still correct because dispatch.py is idempotent on `message_id`, so even running both paths for one message never double-creates.
+
+## STOP CHECK (the invariant the queue enforces)
+
+This is the single most important reliability rule. **Both top-level posts and thread replies REQUIRE dispatch.py (now via the drainer). Spawning a worker without the message being intaked and dispatched is a protocol violation.** The queue-first protocol above is how you satisfy this every time; the wording below documents the failure modes it closes.
 
 The failure mode this prevents: under load, the listener LLM is tempted to "just answer" a short message inline, or to spawn a worker directly without dispatch.py because the message looks easy. Both shortcuts silently break the system. dispatch.py is the ONLY mechanism that adds the eye-emoji acknowledgement to the user's message AND appends the user's turn to the transcript. Skip it and the user stops getting their read-receipt reaction and the conversation file stops recording their messages, with no error.
 
@@ -128,6 +184,8 @@ After handling, STOP. Do not spawn a subagent.
 
 ### B. Top-level post in the listen channel
 
+PRIMARY PATH is the QUEUE-FIRST protocol above (intake, then `drainer.py drain-one`, then `dispatch-claimed --title`, then spawn, then `mark-spawned`). The steps below are the exact dispatch.py mechanics the drainer runs for you under the hood; run them by hand ONLY as the fallback when the queue is unavailable.
+
 When `chat_id == LISTEN_CHANNEL`:
 
 DO NOT reply inline. DO NOT use the Discord plugin `reply` tool. DO NOT call `$SEND --channel-id LISTEN_CHANNEL ...`. The ONLY valid first action is dispatch.py.
@@ -152,6 +210,8 @@ DO NOT reply inline. DO NOT use the Discord plugin `reply` tool. DO NOT call `$S
 ### C. Reply inside an existing thread you own
 
 (Section 0.5 already filtered out threads you do not own.)
+
+PRIMARY PATH is the QUEUE-FIRST protocol above (intake, then `drainer.py drain-one`, then `dispatch-claimed` with no title, then spawn, then `mark-spawned`). The steps below are the dispatch.py mechanics the drainer runs for you; run them by hand ONLY as the fallback when the queue is unavailable.
 
 DO NOT spawn an Agent subagent yet. DO NOT skip dispatch.py because the message is "short" or "easy". The ONLY valid first action is `python3 $DISPATCH reply ...`. It adds the eye-emoji acknowledgement and appends the user's turn to the transcript. If you skip it, both silently break.
 

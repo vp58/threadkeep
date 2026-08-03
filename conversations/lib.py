@@ -9,12 +9,18 @@ from frontmatter on demand. If they drift, regen the registry from .md scan.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+try:  # fcntl is POSIX-only; on platforms without it the lock is a no-op.
+    import fcntl
+except Exception:  # pragma: no cover
+    fcntl = None  # type: ignore
 
 from config import CONFIG, configured_timezone
 
@@ -25,8 +31,35 @@ ARCHIVED = BASE / "archived"
 REGISTRY = BASE / "_registry.json"
 INDEX = BASE / "INDEX.md"
 TEMPLATE = BASE / "_TEMPLATE.md"
+LOCK_FILE = BASE / "state" / ".registry.lock"
 
 DISCORD_CHAT_CHANNEL = CONFIG.discord.chat_channel_id
+
+
+@contextlib.contextmanager
+def registry_lock():
+    """Hold an exclusive advisory lock for the duration of a transcript /
+    registry read-modify-write so two concurrent workers cannot lose each
+    other's appends. Fail-open: if locking is unavailable, proceed unlocked
+    rather than break the live path."""
+    f = None
+    if fcntl is not None:
+        try:
+            LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
+            f = open(LOCK_FILE, "w")
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        except Exception:
+            if f is not None:
+                with contextlib.suppress(Exception):
+                    f.close()
+            f = None
+    try:
+        yield
+    finally:
+        if f is not None:
+            with contextlib.suppress(Exception):
+                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                f.close()
 
 
 # ----- timestamps -----
@@ -294,15 +327,20 @@ def _display_path(path: Path) -> str:
 
 
 def append_turn(session_id: str, speaker: str, text: str) -> None:
-    """Append a transcript turn and update last_message_at + counters."""
-    fm, body, path = load_conversation(session_id)
-    fm["last_message_at"] = now_iso()
-    fm["last_action_by"] = speaker
-    fm["message_count"] = int(fm.get("message_count", 0) or 0) + 1
-    entry = f"\n### {now_human()}, {speaker}\n\n{text}\n"
-    body = body.rstrip() + "\n" + entry
-    save_conversation(fm, body, path)
-    regen_index()
+    """Append a transcript turn and update last_message_at + counters.
+
+    The whole read-modify-write of the .md is serialized under registry_lock so
+    two concurrent workers cannot lose each other's appends.
+    """
+    with registry_lock():
+        fm, body, path = load_conversation(session_id)
+        fm["last_message_at"] = now_iso()
+        fm["last_action_by"] = speaker
+        fm["message_count"] = int(fm.get("message_count", 0) or 0) + 1
+        entry = f"\n### {now_human()}, {speaker}\n\n{text}\n"
+        body = body.rstrip() + "\n" + entry
+        save_conversation(fm, body, path)
+        regen_index()
 
 
 def set_status(session_id: str, status: str) -> None:
