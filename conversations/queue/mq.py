@@ -37,14 +37,21 @@ State DB resolution order:
 """
 from __future__ import annotations
 
+import contextlib
+import hashlib
 import os
+import secrets
 import sqlite3
+import stat
+import sys
 import time
 from pathlib import Path
 from typing import Any, Optional
 
 _HERE = Path(__file__).resolve().parent
 _CONVERSATIONS = _HERE.parent
+sys.path.insert(0, str(_CONVERSATIONS))
+from config import CONFIG  # noqa: E402
 
 # A row in a transient (claimed) state for longer than this many seconds is
 # assumed to belong to a crashed worker and is re-armed on recover_stale().
@@ -60,21 +67,56 @@ def _db_path(db_path: Optional[str | Path] = None) -> Path:
     env = os.environ.get("THREADKEEP_MQ_DB")
     if env:
         return Path(env).expanduser()
-    conv = os.environ.get("THREADKEEP_CONVERSATIONS_DIR")
-    base = Path(conv).expanduser() if conv else _CONVERSATIONS
+    base = CONFIG.paths.conversations_dir
     return base / "state" / "mq.sqlite3"
 
 
 def connect(db_path: Optional[str | Path] = None) -> sqlite3.Connection:
-    """Open (and lazily initialize) the queue DB with WAL + sane busy timeout."""
+    """Open the private queue DB and fail closed on unsafe state or corruption."""
     p = _db_path(db_path)
-    p.parent.mkdir(parents=True, exist_ok=True)
+    p.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    parent = p.parent.lstat()
+    if (
+        stat.S_ISLNK(parent.st_mode)
+        or not stat.S_ISDIR(parent.st_mode)
+        or parent.st_uid != os.getuid()
+    ):
+        raise RuntimeError("queue state directory must be real and current-user-owned")
+    os.chmod(p.parent, 0o700, follow_symlinks=False)
+    if p.is_symlink():
+        raise RuntimeError("queue DB must not be a symlink")
+    if not p.exists():
+        flags = os.O_RDWR | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0)
+        flags |= getattr(os, "O_NOFOLLOW", 0)
+        try:
+            descriptor = os.open(p, flags, 0o600)
+        except FileExistsError:
+            pass
+        else:
+            os.close(descriptor)
+    before = p.lstat()
+    if (
+        stat.S_ISLNK(before.st_mode)
+        or not stat.S_ISREG(before.st_mode)
+        or before.st_uid != os.getuid()
+        or before.st_nlink != 1
+    ):
+        raise RuntimeError("queue DB must be a private regular file")
     conn = sqlite3.connect(str(p), timeout=30, isolation_level=None)
+    after = p.lstat()
+    if (before.st_dev, before.st_ino) != (after.st_dev, after.st_ino):
+        conn.close()
+        raise RuntimeError("queue DB changed while opening")
+    os.chmod(p, 0o600, follow_symlinks=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL;")
-    conn.execute("PRAGMA synchronous=NORMAL;")
+    conn.execute("PRAGMA synchronous=FULL;")
     conn.execute("PRAGMA busy_timeout=30000;")
     conn.execute("PRAGMA foreign_keys=ON;")
+    check = conn.execute("PRAGMA quick_check;").fetchone()
+    if check is None or check[0] != "ok":
+        conn.close()
+        raise RuntimeError("queue DB failed integrity check")
     _init(conn)
     return conn
 
@@ -121,6 +163,22 @@ def _migrate(conn: sqlite3.Connection) -> None:
     # WARN for an errored row, so a handled-but-errored row cannot page forever.
     if "dead_letter_acked_at" not in cols:
         conn.execute("ALTER TABLE messages ADD COLUMN dead_letter_acked_at REAL")
+    if "completion_token" not in cols:
+        conn.execute("ALTER TABLE messages ADD COLUMN completion_token TEXT")
+    if "response_sha256" not in cols:
+        conn.execute("ALTER TABLE messages ADD COLUMN response_sha256 TEXT")
+    if "response_message_id" not in cols:
+        conn.execute("ALTER TABLE messages ADD COLUMN response_message_id TEXT")
+    if "response_content" not in cols:
+        conn.execute("ALTER TABLE messages ADD COLUMN response_content TEXT")
+    if "response_nonce" not in cols:
+        conn.execute("ALTER TABLE messages ADD COLUMN response_nonce TEXT")
+    if "response_attempted_at" not in cols:
+        conn.execute("ALTER TABLE messages ADD COLUMN response_attempted_at REAL")
+    if "response_ambiguous_at" not in cols:
+        conn.execute("ALTER TABLE messages ADD COLUMN response_ambiguous_at REAL")
+    if "response_confirmed_at" not in cols:
+        conn.execute("ALTER TABLE messages ADD COLUMN response_confirmed_at REAL")
 
 
 # ---------------------------------------------------------------------------
@@ -145,26 +203,90 @@ def enqueue(
     exactly once. ack-once invariant lives here.
     """
     now = time.time()
-    cur = conn.execute(
-        """
-        INSERT OR IGNORE INTO messages
-            (message_id, chat_id, user, ts, body, kind, title,
-             state, received_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'received', ?, ?)
-        """,
-        (message_id, chat_id, user, ts, body, kind, title, now, now),
-    )
-    return cur.rowcount == 1
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        cur = conn.execute(
+            """
+            INSERT OR IGNORE INTO messages
+                (message_id, chat_id, user, ts, body, kind, title,
+                 state, received_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'received', ?, ?)
+            """,
+            (message_id, chat_id, user, ts, body, kind, title, now, now),
+        )
+        if cur.rowcount == 0:
+            existing = conn.execute(
+                "SELECT chat_id,user,ts,body,kind,title FROM messages WHERE message_id=?",
+                (message_id,),
+            ).fetchone()
+            immutable_matches = (
+                existing is not None
+                and tuple(existing[:5]) == (chat_id, user, ts, body, kind)
+                and (title is None or existing["title"] == title)
+            )
+            if not immutable_matches:
+                raise RuntimeError("duplicate message ID changed immutable intake data")
+        conn.execute("COMMIT")
+        return cur.rowcount == 1
+    except Exception:
+        with contextlib.suppress(sqlite3.Error):
+            conn.execute("ROLLBACK")
+        raise
+
+
+def freeze_title(
+    conn: sqlite3.Connection, message_id: str, supplied_title: str | None
+) -> str:
+    """Bind the first valid generated title to one claimed top-level row."""
+
+    if supplied_title is not None and (
+        not supplied_title.strip()
+        or len(supplied_title) > 100
+        or "\n" in supplied_title
+        or "\r" in supplied_title
+    ):
+        raise ValueError("invalid generated title")
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        row = conn.execute(
+            "SELECT state,title FROM messages WHERE message_id=?", (message_id,)
+        ).fetchone()
+        if row is None:
+            raise RuntimeError("queue row disappeared while freezing title")
+        if row["state"] != "claimed":
+            raise RuntimeError("title can only be frozen for a claimed row")
+        frozen = row["title"]
+        if frozen is None:
+            if supplied_title is None:
+                raise RuntimeError("top-level dispatch requires a title")
+            frozen = supplied_title.strip()
+            cursor = conn.execute(
+                "UPDATE messages SET title=?,updated_at=? "
+                "WHERE message_id=? AND state='claimed' AND title IS NULL",
+                (frozen, time.time(), message_id),
+            )
+            if cursor.rowcount != 1:
+                raise RuntimeError("queue title freeze lost its claimed row")
+        elif supplied_title is not None and frozen != supplied_title.strip():
+            raise RuntimeError("generated title changed after it was frozen")
+        conn.execute("COMMIT")
+        return str(frozen)
+    except Exception:
+        with contextlib.suppress(sqlite3.Error):
+            conn.execute("ROLLBACK")
+        raise
 
 
 def mark_acked(conn: sqlite3.Connection, message_id: str) -> None:
     """Record that the eye reaction was confirmed on this message."""
     now = time.time()
-    conn.execute(
+    cursor = conn.execute(
         "UPDATE messages SET acked_at=COALESCE(acked_at, ?), updated_at=? "
         "WHERE message_id=?",
         (now, now, message_id),
     )
+    if cursor.rowcount != 1:
+        raise RuntimeError("queue row disappeared before acknowledgment")
 
 
 # ---------------------------------------------------------------------------
@@ -224,39 +346,299 @@ def mark_dispatched(
     thread_id: str,
 ) -> None:
     now = time.time()
-    conn.execute(
-        "UPDATE messages SET state='dispatched', session_id=?, thread_id=?, "
-        "dispatched_at=?, updated_at=? WHERE message_id=?",
-        (session_id, thread_id, now, now, message_id),
-    )
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        row = conn.execute(
+            "SELECT state,session_id,thread_id FROM messages WHERE message_id=?",
+            (message_id,),
+        ).fetchone()
+        if row is None:
+            raise RuntimeError("queue row disappeared before dispatch binding")
+        if row["state"] == "dispatched":
+            if row["session_id"] != session_id or row["thread_id"] != thread_id:
+                raise RuntimeError("dispatch replay changed immutable queue binding")
+            conn.execute("COMMIT")
+            return
+        if row["state"] != "claimed":
+            raise RuntimeError("queue row is not claimed for dispatch")
+        cursor = conn.execute(
+            "UPDATE messages SET state='dispatched', session_id=?, thread_id=?, "
+            "dispatched_at=?, updated_at=? WHERE message_id=? AND state='claimed'",
+            (session_id, thread_id, now, now, message_id),
+        )
+        if cursor.rowcount != 1:
+            raise RuntimeError("dispatch binding lost its claimed queue row")
+        conn.execute("COMMIT")
+    except Exception:
+        with contextlib.suppress(sqlite3.Error):
+            conn.execute("ROLLBACK")
+        raise
 
 
 def mark_spawned(conn: sqlite3.Connection, message_id: str) -> None:
     now = time.time()
-    conn.execute(
-        "UPDATE messages SET state='spawned', updated_at=? WHERE message_id=?",
-        (now, message_id),
-    )
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        row = conn.execute(
+            "SELECT state,completion_token FROM messages WHERE message_id=?",
+            (message_id,),
+        ).fetchone()
+        if row is None:
+            raise RuntimeError("queue row disappeared before spawn authorization")
+        if row["state"] == "spawned" and row["completion_token"]:
+            conn.execute("COMMIT")
+            return
+        if row["state"] != "dispatched":
+            raise RuntimeError("worker can only be authorized from dispatched state")
+        completion_token = row["completion_token"] or secrets.token_hex(16)
+        cursor = conn.execute(
+            "UPDATE messages SET state='spawned',completion_token=?,updated_at=? "
+            "WHERE message_id=? AND state='dispatched'",
+            (completion_token, now, message_id),
+        )
+        if cursor.rowcount != 1:
+            raise RuntimeError("spawn authorization lost its dispatched row")
+        conn.execute("COMMIT")
+    except Exception:
+        with contextlib.suppress(sqlite3.Error):
+            conn.execute("ROLLBACK")
+        raise
 
 
 def mark_done(conn: sqlite3.Connection, message_id: str) -> None:
-    now = time.time()
-    conn.execute(
-        "UPDATE messages SET state='done', updated_at=? WHERE message_id=?",
-        (now, message_id),
+    raise RuntimeError("direct mark_done is disabled; use complete-response")
+
+
+def prepare_response_completion(
+    conn: sqlite3.Connection,
+    message_id: str,
+    *,
+    session_id: str,
+    thread_id: str,
+    response_sha256: str,
+    response_content: str,
+) -> sqlite3.Row:
+    """Freeze one complete immutable delivery manifest before Discord POST."""
+
+    if len(response_sha256) != 64 or any(c not in "0123456789abcdef" for c in response_sha256):
+        raise ValueError("response_sha256 must be lowercase hexadecimal")
+    if not response_content or len(response_content) > 1900:
+        raise ValueError("response_content is outside the Discord size limit")
+    if secrets.compare_digest(
+        hashlib.sha256(response_content.encode("utf-8")).hexdigest(),
+        response_sha256,
+    ) is False:
+        raise RuntimeError("response content does not match its digest")
+    conn.execute("BEGIN IMMEDIATE;")
+    try:
+        row = conn.execute(
+            "SELECT * FROM messages WHERE message_id=?", (message_id,)
+        ).fetchone()
+        if row is None:
+            raise RuntimeError("worker completion row does not exist")
+        if row["session_id"] != session_id or row["thread_id"] != thread_id:
+            raise RuntimeError("worker completion does not match its queue binding")
+        if row["state"] not in {"spawned", "done"}:
+            raise RuntimeError("worker completion row is not spawned")
+        token = row["completion_token"] or secrets.token_hex(16)
+        nonce = "tk" + hashlib.sha256(
+            f"{message_id}:{token}".encode("utf-8")
+        ).hexdigest()[:23]
+        frozen_sha = row["response_sha256"]
+        if frozen_sha is not None and frozen_sha != response_sha256:
+            raise RuntimeError("worker completion response changed after preparation")
+        frozen_content = row["response_content"]
+        if frozen_content is not None and frozen_content != response_content:
+            raise RuntimeError("worker completion content changed after preparation")
+        frozen_nonce = row["response_nonce"]
+        if frozen_nonce is not None and frozen_nonce != nonce:
+            raise RuntimeError("worker completion nonce changed after preparation")
+        conn.execute(
+            "UPDATE messages SET completion_token=?,response_sha256=?,"
+            "response_content=?,response_nonce=?,updated_at=? "
+            "WHERE message_id=?",
+            (token, response_sha256, response_content, nonce, time.time(), message_id),
+        )
+        conn.execute("COMMIT;")
+    except Exception:
+        conn.execute("ROLLBACK;")
+        raise
+    result = conn.execute(
+        "SELECT * FROM messages WHERE message_id=?", (message_id,)
+    ).fetchone()
+    if result is None:
+        raise RuntimeError("worker completion row disappeared")
+    return result
+
+
+def begin_response_attempt(
+    conn: sqlite3.Connection, message_id: str
+) -> tuple[bool, float]:
+    """Durably cross the local side of the one unknown-commit POST boundary."""
+
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        row = conn.execute(
+            "SELECT state,response_nonce,response_attempted_at,response_ambiguous_at,"
+            "response_message_id FROM messages WHERE message_id=?",
+            (message_id,),
+        ).fetchone()
+        if row is None or row["state"] != "spawned" or not row["response_nonce"]:
+            raise RuntimeError("response attempt lost its prepared spawned row")
+        if row["response_message_id"] is not None:
+            raise RuntimeError("confirmed response cannot be attempted again")
+        if row["response_ambiguous_at"] is not None:
+            raise RuntimeError("response delivery is quarantined as ambiguous")
+        attempted_at = row["response_attempted_at"]
+        if attempted_at is None:
+            attempted_at = time.time()
+            cursor = conn.execute(
+                "UPDATE messages SET response_attempted_at=?,updated_at=? "
+                "WHERE message_id=? AND state='spawned' AND response_attempted_at IS NULL",
+                (attempted_at, attempted_at, message_id),
+            )
+            if cursor.rowcount != 1:
+                raise RuntimeError("response attempt lost its prepared row")
+            conn.execute("COMMIT")
+            return True, float(attempted_at)
+        conn.execute("COMMIT")
+        return False, float(attempted_at)
+    except Exception:
+        with contextlib.suppress(sqlite3.Error):
+            conn.execute("ROLLBACK")
+        raise
+
+
+def clear_response_attempt(
+    conn: sqlite3.Connection, message_id: str, attempted_at: float
+) -> None:
+    """Reset only this call's first attempt after a definitive HTTP rejection."""
+
+    cursor = conn.execute(
+        "UPDATE messages SET response_attempted_at=NULL,updated_at=? "
+        "WHERE message_id=? AND state='spawned' AND response_attempted_at=? "
+        "AND response_message_id IS NULL AND response_ambiguous_at IS NULL",
+        (time.time(), message_id, attempted_at),
     )
+    if cursor.rowcount != 1:
+        raise RuntimeError("response attempt reset lost its prepared row")
+
+
+def mark_response_ambiguous(conn: sqlite3.Connection, message_id: str) -> None:
+    now = time.time()
+    cursor = conn.execute(
+        "UPDATE messages SET response_ambiguous_at=?,updated_at=? "
+        "WHERE message_id=? AND state='spawned' AND response_attempted_at IS NOT NULL "
+        "AND response_message_id IS NULL AND response_ambiguous_at IS NULL",
+        (now, now, message_id),
+    )
+    if cursor.rowcount != 1:
+        row = get(conn, message_id)
+        if row is not None and row["response_ambiguous_at"] is not None:
+            return
+        raise RuntimeError("response ambiguity quarantine lost its prepared row")
+
+
+def confirm_response_delivery(
+    conn: sqlite3.Connection,
+    message_id: str,
+    *,
+    response_sha256: str,
+    response_nonce: str,
+    response_message_id: str,
+) -> None:
+    """Persist exact Discord readback confirmation without terminalizing yet."""
+
+    now = time.time()
+    cursor = conn.execute(
+        "UPDATE messages SET response_message_id=?,response_confirmed_at=?,updated_at=? "
+        "WHERE message_id=? AND state='spawned' AND response_sha256=? "
+        "AND response_nonce=? AND response_attempted_at IS NOT NULL "
+        "AND response_message_id IS NULL AND response_ambiguous_at IS NULL",
+        (
+            response_message_id,
+            now,
+            now,
+            message_id,
+            response_sha256,
+            response_nonce,
+        ),
+    )
+    if cursor.rowcount == 1:
+        return
+    row = get(conn, message_id)
+    if (
+        row is not None
+        and row["state"] in {"spawned", "done"}
+        and row["response_sha256"] == response_sha256
+        and row["response_nonce"] == response_nonce
+        and row["response_message_id"] == response_message_id
+        and row["response_ambiguous_at"] is None
+    ):
+        return
+    raise RuntimeError("response delivery confirmation lost its immutable binding")
+
+
+def finish_response_completion(
+    conn: sqlite3.Connection,
+    message_id: str,
+    *,
+    response_sha256: str,
+    response_message_id: str,
+) -> None:
+    """Terminalize only after Discord readback and transcript append succeed."""
+
+    now = time.time()
+    cursor = conn.execute(
+        "UPDATE messages SET state='done', response_message_id=?, updated_at=? "
+        "WHERE message_id=? AND state='spawned' AND response_sha256=? "
+        "AND response_message_id=? AND response_confirmed_at IS NOT NULL "
+        "AND response_ambiguous_at IS NULL",
+        (response_message_id, now, message_id, response_sha256, response_message_id),
+    )
+    if cursor.rowcount == 1:
+        return
+    row = conn.execute(
+        "SELECT state,response_sha256,response_message_id FROM messages WHERE message_id=?",
+        (message_id,),
+    ).fetchone()
+    if (
+        row is not None
+        and row["state"] == "done"
+        and row["response_sha256"] == response_sha256
+        and row["response_message_id"] == response_message_id
+    ):
+        return
+    raise RuntimeError("worker response completion lost its immutable binding")
 
 
 def mark_errored(conn: sqlite3.Connection, message_id: str, error: str) -> None:
     now = time.time()
+    row = get(conn, message_id)
+    if row is None:
+        raise RuntimeError("queue row disappeared before dead-letter transition")
+    if (
+        row["state"] == "spawned"
+        and row["response_attempted_at"] is not None
+        and row["response_message_id"] is None
+    ):
+        raise RuntimeError(
+            "an unresolved Discord response attempt cannot be dead-lettered"
+        )
+    if row["state"] == "done":
+        raise RuntimeError("a completed queue row cannot be dead-lettered")
     # Reset dead_letter_acked_at so a row that (re-)enters errored pages once
     # more, even if a prior errored alert for the same id was already acked.
-    conn.execute(
+    cursor = conn.execute(
         "UPDATE messages SET state='errored', error=?, "
         "dead_letter_acked_at=NULL, updated_at=? "
-        "WHERE message_id=?",
+        "WHERE message_id=? AND state NOT IN ('done','errored')",
         (error[:2000], now, message_id),
     )
+    if cursor.rowcount != 1:
+        if row["state"] == "errored" and row["error"] == error[:2000]:
+            return
+        raise RuntimeError("dead-letter transition lost its queue row")
 
 
 def errored_unacked(conn: sqlite3.Connection) -> list[sqlite3.Row]:

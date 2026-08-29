@@ -1,0 +1,7 @@
+# Installer runtime lock for Apple Silicon macOS and CPython 3.11 through 3.14.
+# Regenerate and review these hashes before changing the pinned dependency.
+websockets==16.0 \
+    --hash=sha256:af80d74d4edfa3cb9ed973a0a5ba2b2a549371f8a741e0800cb07becdd20f23d \
+    --hash=sha256:86890e837d61574c92a97496d590968b23c2ef0aeb8a9bc9421d174cd378ae39 \
+    --hash=sha256:e6578ed5b6981005df1860a56e3617f14a6c307e6a71b4fff8c48fdc50f3ed2c \
+    --hash=sha256:fd3cb4adb94a2a6e2b7c0d8d05cb94e6f1c81a0cf9dc2694fb65c7e8d94c42e4

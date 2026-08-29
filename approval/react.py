@@ -10,13 +10,16 @@ from __future__ import annotations
 
 import argparse
 import os
-import subprocess
 import sys
 import urllib.parse
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
 from send_message import load_token  # noqa: E402
+sys.path.insert(0, os.path.join(_HERE, "..", "conversations"))
+from config import CONFIG  # noqa: E402
+from discord_destination import validate_destination, validate_principal  # noqa: E402
+from discord_http import request  # noqa: E402
 
 ALIASES = {
     "eyes": "\N{EYES}",
@@ -37,18 +40,9 @@ ALIASES = {
 
 def react(channel_id: str, message_id: str, emoji: str, token: str) -> bool:
     encoded = urllib.parse.quote(emoji, safe="")
-    url = f"https://discord.com/api/v10/channels/{channel_id}/messages/{message_id}/reactions/{encoded}/@me"
-    cmd = [
-        "curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
-        "--retry", "3", "--retry-delay", "3",
-        "-X", "PUT",
-        "-H", f"Authorization: Bot {token}",
-        "-H", "Content-Length: 0",
-        url,
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    status = result.stdout.strip()
-    return status in ("204", "200")
+    path = f"/channels/{channel_id}/messages/{message_id}/reactions/{encoded}/@me"
+    status, _ = request("PUT", path, token, body=b"", timeout=30)
+    return status in (204, 200)
 
 
 def main() -> int:
@@ -60,6 +54,12 @@ def main() -> int:
 
     emoji = ALIASES.get(args.emoji.lower().strip(":"), args.emoji)
     token = load_token()
+    validate_principal(token)
+    validate_destination(
+        token,
+        args.channel_id,
+        allow_chat_root=args.channel_id == CONFIG.discord.chat_channel_id,
+    )
     ok = react(args.channel_id, args.message_id, emoji, token)
     print("ok" if ok else "failed", file=sys.stderr)
     return 0 if ok else 1
