@@ -5,9 +5,13 @@
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Status](https://img.shields.io/badge/status-pre--release-orange)
 
-Persistent Discord conversation orchestration for Claude Code and OpenAI Codex.
+**Run Claude Code and OpenAI Codex from Discord using the subscriptions you already pay for.** Threadkeep pipes each agent into its own Discord bot and channel, keeps durable local task memory, and lets either agent pick up the other's work through shared workspace context. If you prefer, Discord threads can remain the complete coordination surface.
 
-Threadkeep can run either provider or both. Each provider owns a separate Discord bot, channel, runtime, authentication path, and conversation state. Claude remains compatible with the original Threadkeep installation. Codex is an optional, separately installed provider.
+![Threadkeep running in Discord: a #claude and a #chatgpt channel in the sidebar, each with its own list of named conversation threads, an open thread feed in the middle, and the active thread transcript in the right-hand panel](docs/assets/threadkeep-hero.png)
+
+Threadkeep can run either provider or both. Each provider owns a separate Discord bot, channel, runtime, authentication path, and model session. Claude uses your Claude Code subscription login. Codex uses your ChatGPT subscription login through OpenAI's official Codex App Server, with no manually supplied OpenAI API key. Durable conversation records and the shared local workspace preserve context without silently mixing provider credentials or sessions.
+
+Contributions welcome. See `CONTRIBUTING.md` for the PR flow, issue templates, and code style.
 
 | Provider | Discord path | Local runtime | Model authentication | Default authority |
 | --- | --- | --- | --- | --- |
