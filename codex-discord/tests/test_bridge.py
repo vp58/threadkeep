@@ -4195,6 +4195,10 @@ class DiscordIOTests(unittest.TestCase):
                 "codex_discord_bridge.discord_io.subprocess.run",
                 return_value=completed,
             ) as run,
+            patch(
+                "codex_discord_bridge.discord_io.Path.lstat",
+                return_value=SimpleNamespace(st_mode=0o100755, st_uid=0),
+            ),
         ):
             self.assertEqual(dedicated_token(CFG), token)
         arguments = run.call_args.args[0]
