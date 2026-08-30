@@ -2151,12 +2151,17 @@ os._exit(0)
                     start_new_session=True,
                 )
                 try:
+                    descendant_pid = None
                     for _ in range(100):
-                        if descendant_path.exists():
-                            break
+                        try:
+                            value = descendant_path.read_text().strip()
+                            if value:
+                                descendant_pid = int(value)
+                                break
+                        except (FileNotFoundError, ValueError):
+                            pass
                         await asyncio.sleep(0.01)
-                    self.assertTrue(descendant_path.exists())
-                    descendant_pid = int(descendant_path.read_text())
+                    self.assertIsNotNone(descendant_pid)
                     self.assertIsNone(process.returncode)
                     self.assertEqual(os.getpgid(process.pid), process.pid)
 
