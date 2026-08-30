@@ -7,6 +7,8 @@
 
 Persistent Discord conversation orchestrator for Claude Code.
 
+![Threadkeep running in Discord: a #claude and a #chatgpt channel in the sidebar, each with its own list of named conversation threads, an open thread feed in the middle, and the active thread transcript in the right-hand panel](docs/assets/threadkeep-hero.png)
+
 A single Claude Code session listens to one Discord channel, creates a durable markdown record of every conversation, and dispatches the actual work to background subagents. The listener stays responsive while threads run in parallel.
 
 Contributions welcome. See `CONTRIBUTING.md` for the PR flow, issue templates, and code style.
