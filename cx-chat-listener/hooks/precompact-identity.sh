@@ -11,7 +11,7 @@
 #      somehow bypassed.
 #
 # Gated on cwd: only runs when the session cwd is the cx-chat-listener subdir
-# OF THE CONFIGURED THREADKEEP REPO. Other Claude Code sessions are unaffected.
+# OF THE CONFIGURED DISCOPARTY REPO. Other Claude Code sessions are unaffected.
 #
 # To register this hook, copy or symlink the rendered settings entry from
 # `docs/SETUP.md` step "Identity persistence hooks" into your user-scoped
@@ -33,7 +33,7 @@ set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LISTENER_DIR="$(cd "$HERE/.." && pwd)"
 IDENTITY_FILE="$LISTENER_DIR/CLAUDE.md"
-SENTINEL="${THREADKEEP_PRECOMPACT_SENTINEL:-/tmp/threadkeep-cx-chat-precompact-marker}"
+SENTINEL="${DISCOPARTY_PRECOMPACT_SENTINEL:-/tmp/discoparty-cx-chat-precompact-marker}"
 
 INPUT=$(cat)
 
@@ -67,7 +67,7 @@ payload = {
     "hookSpecificOutput": {
         "hookEventName": "PreCompact",
         "additionalContext": (
-            "CX-CHAT IDENTITY RESET (PreCompact hook): you are the Threadkeep "
+            "CX-CHAT IDENTITY RESET (PreCompact hook): you are the Disco Party "
             "cx-chat listener. Top-level posts in the configured listen channel "
             "go through dispatch.py and spawn a worker via the Agent tool. "
             "Never reply inline. Full protocol below.\n\n"

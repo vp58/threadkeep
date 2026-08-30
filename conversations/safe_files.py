@@ -36,15 +36,15 @@ def exchange_dir() -> Path:
         or metadata.st_uid != os.getuid()
         or stat.S_IMODE(metadata.st_mode) != 0o700
     ):
-        raise RuntimeError("Threadkeep exchange directory is not private and owned")
+        raise RuntimeError("Disco Party exchange directory is not private and owned")
     return path
 
 
 def _validate(kind: str, exchange_id: str) -> Path:
     if kind not in KINDS:
-        raise ValueError("unsupported Threadkeep exchange kind")
+        raise ValueError("unsupported Disco Party exchange kind")
     if not EXCHANGE_ID.fullmatch(exchange_id):
-        raise ValueError("invalid Threadkeep exchange ID")
+        raise ValueError("invalid Disco Party exchange ID")
     return exchange_dir() / f"{kind}-{exchange_id}.txt"
 
 
@@ -80,27 +80,27 @@ def read(kind: str, exchange_id: str, *, consume: bool = False) -> str:
             or before.st_nlink != 1
             or before.st_size > MAX_BYTES[kind]
         ):
-            raise RuntimeError("Threadkeep exchange file is unsafe or too large")
+            raise RuntimeError("Disco Party exchange file is unsafe or too large")
         chunks = bytearray()
         while chunk := os.read(
             descriptor, min(65_536, MAX_BYTES[kind] + 1 - len(chunks))
         ):
             chunks.extend(chunk)
             if len(chunks) > MAX_BYTES[kind]:
-                raise RuntimeError("Threadkeep exchange file exceeds its size limit")
+                raise RuntimeError("Disco Party exchange file exceeds its size limit")
         after = os.fstat(descriptor)
         if (
             (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
             != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
             or after.st_nlink != 1
         ):
-            raise RuntimeError("Threadkeep exchange file changed while reading")
+            raise RuntimeError("Disco Party exchange file changed while reading")
         try:
             text = bytes(chunks).decode("utf-8")
         except UnicodeDecodeError as exc:
-            raise RuntimeError("Threadkeep exchange file is not UTF-8") from exc
+            raise RuntimeError("Disco Party exchange file is not UTF-8") from exc
         if "\x00" in text:
-            raise RuntimeError("Threadkeep exchange file contains a NUL byte")
+            raise RuntimeError("Disco Party exchange file contains a NUL byte")
     finally:
         os.close(descriptor)
     if consume:

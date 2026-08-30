@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Seal the canonical Vault P0 rules for unattended Threadkeep workers.
+"""Seal the canonical Vault P0 rules for unattended Disco Party workers.
 
 The snapshot is mechanically derived from the canonical Vault ``CLAUDE.md``.
-Threadkeep never maintains a second prose copy of those rules.
+Disco Party never maintains a second prose copy of those rules.
 """
 from __future__ import annotations
 
@@ -318,7 +318,7 @@ def extract_p0_policy(source: str) -> str:
 
 def _snapshot_bytes(source_path: Path, source_sha256: str, policy_text: str) -> bytes:
     header = (
-        "# Threadkeep Sealed Vault P0 Policy\n\n"
+        "# Disco Party Sealed Vault P0 Policy\n\n"
         "Generated mechanically from the canonical Vault source. Do not edit.\n\n"
         f"Seal version: {POLICY_SEAL_VERSION}\n"
         f"Source path: {source_path}\n"

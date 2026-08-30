@@ -58,7 +58,7 @@ def _read_request() -> dict[str, Any]:
 def _safe_name(name: str) -> str:
     value = public_safe_output(name, agent_name="Claude")
     if value == withheld_notice("Claude"):
-        value = "Threadkeep conversation"
+        value = "Disco Party conversation"
     value = " ".join(value.split())[:100].strip()
     if not value:
         raise RuntimeError("thread name became empty after filtering")

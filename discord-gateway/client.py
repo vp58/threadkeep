@@ -313,7 +313,7 @@ async def wait_for_identify_budget(logger: logging.Logger) -> None:
 
 def setup_logging() -> logging.Logger:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
-    logger = logging.getLogger("threadkeep-gateway")
+    logger = logging.getLogger("discoparty-gateway")
     if logger.handlers:
         return logger
     logger.setLevel(logging.INFO)
@@ -449,7 +449,7 @@ def _post_interaction_callback(
         data=json.dumps(payload).encode("utf-8"),
         headers={
             "Content-Type": "application/json",
-            "User-Agent": "ThreadkeepGatewayClient/0.1",
+            "User-Agent": "Disco PartyGatewayClient/0.1",
         },
         method="POST",
     )
@@ -645,7 +645,7 @@ async def dispatch_interaction(
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 start_new_session=True,
-                env=sanitized_child_environment(keep={"THREADKEEP_CONFIG"}),
+                env=sanitized_child_environment(keep={"DISCOPARTY_CONFIG"}),
             )
         )
         proc = await asyncio.shield(spawn_task)
@@ -852,8 +852,8 @@ async def gateway_session(
                     "intents": INTENTS,
                     "properties": {
                         "os": sys.platform,
-                        "browser": "ThreadkeepGatewayClient",
-                        "device": "ThreadkeepGatewayClient",
+                        "browser": "Disco PartyGatewayClient",
+                        "device": "Disco PartyGatewayClient",
                     },
                 },
             }
@@ -986,7 +986,7 @@ async def gateway_session(
                                 )
                                 await reject_unauthorized_interaction(data, logger)
                             except RuntimeError as exc:
-                                # An exact Threadkeep approval ID with invalid
+                                # An exact Disco Party approval ID with invalid
                                 # principal/message fields is terminally denied.
                                 # It must not poison the Gateway RESUME cursor.
                                 logger.warning(
@@ -1056,7 +1056,7 @@ async def run_forever() -> None:
     interaction_wakeup = asyncio.Event()
     drain_task = asyncio.create_task(
         interaction_drain_loop(interaction_wakeup, logger),
-        name="threadkeep-interaction-drainer",
+        name="discoparty-interaction-drainer",
     )
     backoff = 1.0
     session_task: asyncio.Task[None] | None = None
@@ -1066,7 +1066,7 @@ async def run_forever() -> None:
                 gateway_session(
                     token, state, logger, interaction_wakeup=interaction_wakeup
                 ),
-                name="threadkeep-discord-gateway-session",
+                name="discoparty-discord-gateway-session",
             )
             done, _ = await asyncio.wait(
                 {session_task, drain_task}, return_when=asyncio.FIRST_COMPLETED

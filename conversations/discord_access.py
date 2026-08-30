@@ -39,14 +39,14 @@ FORBIDDEN_WRAPPER_ENVIRONMENT = {
     "CODEX_API_KEY",
     "DISCORD_BOT_TOKEN",
     "OPENAI_API_KEY",
-    "THREADKEEP_CODEX_DISCORD_BOT_TOKEN",
+    "DISCOPARTY_CODEX_DISCORD_BOT_TOKEN",
     "TMPDIR",
 }
 
 
 def _snowflake(value: str, label: str) -> str:
     if not SNOWFLAKE.fullmatch(value):
-        raise RuntimeError(f"Threadkeep {label} must be a Discord snowflake")
+        raise RuntimeError(f"Disco Party {label} must be a Discord snowflake")
     return value
 
 
@@ -114,13 +114,13 @@ def _expected_private_directory() -> Path:
         home
         / "Library"
         / "Application Support"
-        / "Threadkeep"
+        / "Discoparty"
         / "claude-discord"
     )
     configured = CONFIG.discord.plugin_state_dir.expanduser()
     if not configured.is_absolute() or configured != expected:
         raise RuntimeError(
-            "Claude Discord state directory must be the dedicated Threadkeep path"
+            "Claude Discord state directory must be the dedicated Disco Party path"
         )
 
     # Compare lexical absolute paths here. Resolving the not-yet-created state
@@ -155,7 +155,7 @@ def _private_directory_descriptor() -> Iterator[tuple[Path, int]]:
         components = (
             "Library",
             "Application Support",
-            "Threadkeep",
+            "Discoparty",
             "claude-discord",
         )
         for index, component in enumerate(components):
@@ -433,8 +433,8 @@ def _validate_wrapper_environment(source: Mapping[str, str], repo: Path) -> str:
         "PATH": CLEAN_PATH,
         "LANG": "en_US.UTF-8",
         "LC_ALL": "en_US.UTF-8",
-        "THREADKEEP_REPO_ROOT": str(repo),
-        "THREADKEEP_CONFIG": str(repo / "config.toml"),
+        "DISCOPARTY_REPO_ROOT": str(repo),
+        "DISCOPARTY_CONFIG": str(repo / "config.toml"),
         "PYTHONPATH": str(repo / "conversations"),
     }
     for name, value in expected.items():
@@ -453,7 +453,7 @@ def _validate_config_file(repo: Path) -> None:
     try:
         metadata = path.lstat()
     except OSError as exc:
-        raise RuntimeError("Threadkeep configuration is unavailable") from exc
+        raise RuntimeError("Disco Party configuration is unavailable") from exc
     if (
         stat.S_ISLNK(metadata.st_mode)
         or not stat.S_ISREG(metadata.st_mode)
@@ -461,7 +461,7 @@ def _validate_config_file(repo: Path) -> None:
         or stat.S_IMODE(metadata.st_mode) & 0o022
         or metadata.st_nlink != 1
     ):
-        raise RuntimeError("Threadkeep configuration metadata is unsafe")
+        raise RuntimeError("Disco Party configuration metadata is unsafe")
 
 
 def _reviewed_child_environment(
@@ -500,8 +500,8 @@ def _reviewed_child_environment(
         "LC_ALL": "en_US.UTF-8",
         "TMPDIR": str(runtime_tmp),
         "TERM": term,
-        "THREADKEEP_REPO_ROOT": str(repo),
-        "THREADKEEP_CONFIG": str(repo / "config.toml"),
+        "DISCOPARTY_REPO_ROOT": str(repo),
+        "DISCOPARTY_CONFIG": str(repo / "config.toml"),
         "DISABLE_UPDATES": "1",
         "DISCORD_STATE_DIR": str(state),
         "DISCORD_ACCESS_MODE": "static",
@@ -510,8 +510,8 @@ def _reviewed_child_environment(
         "LISTEN_CHANNEL": CONFIG.discord.chat_channel_id,
         "ERRORS_CHANNEL": CONFIG.discord.errors_channel_id,
         "OWNER_USER_ID": CONFIG.discord.owner_user_id,
-        "THREADKEEP_WORKSPACE_ROOT": str(workspace),
-        "THREADKEEP_SHARED_SKILLS_ROOT": str(workspace),
+        "DISCOPARTY_WORKSPACE_ROOT": str(workspace),
+        "DISCOPARTY_SHARED_SKILLS_ROOT": str(workspace),
         "DISPATCH": str(repo / "conversations" / "dispatch.py"),
         "CONVO": str(repo / "conversations" / "cli.py"),
         "SEND": str(repo / "approval" / "send_message.py"),
@@ -519,7 +519,7 @@ def _reviewed_child_environment(
         "SAFE_FILES": str(repo / "conversations" / "safe_files.py"),
         "INTAKE": str(repo / "conversations" / "queue" / "intake.py"),
         "DRAINER": str(repo / "conversations" / "queue" / "drainer.py"),
-        "THREADKEEP_POLICY_VERIFY": str(
+        "DISCOPARTY_POLICY_VERIFY": str(
             repo / "conversations" / "listener_contract.py"
         ),
     }

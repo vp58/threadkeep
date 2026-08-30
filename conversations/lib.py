@@ -22,7 +22,7 @@ from typing import Any
 try:
     import fcntl
 except Exception as exc:  # pragma: no cover
-    raise RuntimeError("Threadkeep requires POSIX advisory locking") from exc
+    raise RuntimeError("Disco Party requires POSIX advisory locking") from exc
 import stat
 
 from config import CONFIG, configured_timezone
@@ -446,7 +446,7 @@ def append_turn_once(
         raise ValueError("invalid completion response digest")
     if marker_kind not in {"input", "response"}:
         raise ValueError("invalid transcript idempotency marker kind")
-    marker_prefix = f"<!-- threadkeep-{marker_kind}:{completion_token}:"
+    marker_prefix = f"<!-- discoparty-{marker_kind}:{completion_token}:"
     marker = f"{marker_prefix}{text_sha256} -->"
     with registry_lock():
         fm, body, path = load_conversation(session_id)

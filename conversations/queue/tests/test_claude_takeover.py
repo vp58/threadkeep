@@ -224,7 +224,7 @@ class FakeHost:
 
 class Fixture:
     def __init__(self) -> None:
-        self.temporary = tempfile.TemporaryDirectory(prefix="threadkeep-takeover-")
+        self.temporary = tempfile.TemporaryDirectory(prefix="discoparty-takeover-")
         self.root = Path(self.temporary.name)
         self.workspace = self.root / "TheSystem"
         self.conversations = self.workspace / "x_System/Assistant/conversations"
@@ -260,7 +260,7 @@ class Fixture:
             path = self.plist_dir / f"{label}.plist"
             path.write_text(f"plist:{label}\n")
             self.plists.append(path)
-        self.repo = self.root / "threadkeep"
+        self.repo = self.root / "discoparty"
         (self.repo / "discord-gateway/state").mkdir(parents=True)
         (self.repo / "cx-chat-listener").mkdir()
         (self.repo / "cx-launcher.sh").write_text("#!/bin/sh\n")
@@ -361,8 +361,8 @@ class Fixture:
             new_gateway_state=self.gateway_state,
             root_channel=ROOT_CHANNEL,
             owner_user_id=OWNER,
-            new_label_prefix="com.threadkeep",
-            new_session="threadkeep-chat",
+            new_label_prefix="com.discoparty",
+            new_session="discoparty-chat",
             repo_root=self.repo,
         )
         return engine, receipt
@@ -392,8 +392,8 @@ class TakeoverTests(unittest.TestCase):
             "new_gateway_state": self.fixture.gateway_state,
             "root_channel": ROOT_CHANNEL,
             "owner_user_id": OWNER,
-            "new_label_prefix": "com.threadkeep",
-            "new_session": "threadkeep-chat",
+            "new_label_prefix": "com.discoparty",
+            "new_session": "discoparty-chat",
             "repo_root": self.fixture.repo,
         }
         with self.assertRaises(TakeoverError):
@@ -435,7 +435,7 @@ class TakeoverTests(unittest.TestCase):
         )
         runtime_prompt = (
             Path(pwd.getpwuid(os.getuid()).pw_dir)
-            / "Library/Application Support/Threadkeep/claude-discord"
+            / "Library/Application Support/Discoparty/claude-discord"
             / takeover_module.listener_contract.POLICY_DIRECTORY_NAME
             / takeover_module.listener_contract.RUNTIME_PROMPT_NAME
         )
@@ -616,8 +616,8 @@ class TakeoverTests(unittest.TestCase):
             mock.patch.object(takeover_module.os, "killpg", side_effect=fake_killpg),
         ):
             host.stop_replacement(
-                label_prefix="com.threadkeep",
-                session="threadkeep-chat",
+                label_prefix="com.discoparty",
+                session="discoparty-chat",
                 repo_root=repo,
                 workspace_root=workspace,
             )
@@ -732,8 +732,8 @@ class TakeoverTests(unittest.TestCase):
                 new_gateway_state=self.fixture.gateway_state,
                 root_channel=ROOT_CHANNEL,
                 owner_user_id=OWNER,
-                new_label_prefix="com.threadkeep",
-                new_session="threadkeep-chat",
+                new_label_prefix="com.discoparty",
+                new_session="discoparty-chat",
                 repo_root=self.fixture.repo,
             )
         connection = sqlite3.connect(self.fixture.queue_db)
@@ -772,8 +772,8 @@ class TakeoverTests(unittest.TestCase):
                 new_gateway_state=self.fixture.gateway_state,
                 root_channel=ROOT_CHANNEL,
                 owner_user_id=OWNER,
-                new_label_prefix="com.threadkeep",
-                new_session="threadkeep-chat",
+                new_label_prefix="com.discoparty",
+                new_session="discoparty-chat",
                 repo_root=self.fixture.repo,
             )
         connection = sqlite3.connect(self.fixture.queue_db)
@@ -1176,8 +1176,8 @@ class TakeoverTests(unittest.TestCase):
                 new_gateway_state=self.fixture.gateway_state,
                 root_channel=ROOT_CHANNEL,
                 owner_user_id=OWNER,
-                new_label_prefix="com.threadkeep",
-                new_session="threadkeep-chat",
+                new_label_prefix="com.discoparty",
+                new_session="discoparty-chat",
                 repo_root=self.fixture.repo,
             )
         self.assertEqual(self.fixture.host.calls, [])

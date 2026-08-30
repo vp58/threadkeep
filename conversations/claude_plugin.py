@@ -333,7 +333,7 @@ def _runtime_root(home: Path, dependency_digest: str) -> Path:
         f"v{RUNTIME_LAYOUT_VERSION}-{PLUGIN_VERSION}-"
         f"bun-{bun_runtime.EXPECTED_VERSION}-{dependency_digest[:16]}"
     )
-    return home / ".local/share/threadkeep/claude-discord-runtime" / identity
+    return home / ".local/share/discoparty/claude-discord-runtime" / identity
 
 
 def _wrapper_bytes(source: Path, runtime: Path, bun: Path) -> bytes:

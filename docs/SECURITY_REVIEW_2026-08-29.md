@@ -1,4 +1,4 @@
-# Threadkeep dual Discord orchestrator security review
+# Disco Party dual Discord orchestrator security review
 
 Date: 2026-08-29
 
@@ -20,7 +20,7 @@ The design can support the intended topology in two declared authority modes:
 - Workspace-write uses the reviewed root-denied, agent-network-denied profile. Danger-full-access requires the exact operator acknowledgment and may be paired with either `public` or `owner_private`; execution authority is independent of destination trust.
 - Optional `owner_private` requires a truly private parent channel: `@everyone` View Channel denied, exact member View allows for the configured guild owner and dedicated bridge, no other role or member View allow, and no other effective reader.
 - Skill-finder, ELI5, VinayTalks, and triage come from the same canonical Vault source used by Claude. Full mode also injects the canonical Vault `CLAUDE.md` bootstrap from outside its isolated working directory. No Codex-specific skill or instruction copy is maintained.
-- Codex loads the exact canonical command-safety, written-text, and outbound-deny hooks from the Vault. Threadkeep binds their complete file closure and verifies App Server discovery and run events.
+- Codex loads the exact canonical command-safety, written-text, and outbound-deny hooks from the Vault. Disco Party binds their complete file closure and verifies App Server discovery and run events.
 - No Slack, email, or other third-party outbound sender is installed.
 
 The most important full-access result is an accepted residual risk, not a containment claim. OpenAI's Hooks documentation describes hooks as guardrails rather than a complete security boundary. Exact Codex CLI `0.151.0` behavior confirms that a `PreToolUse` hook blocks only when it successfully returns exit code 2. Process launch failures, timeouts, kills, malformed output, serialization failures, and other hook errors allow the tool to continue. App Server can detect the failed event and stop later work, but it cannot undo a shell command or patch that already ran. Private directories, file modes, hashes, bot separation, isolated login state, and Hooks improve integrity and reduce mistakes. The acknowledgment authorizes full mode operationally; it does not isolate the same-user process. Channel trust governs Discord visibility separately.
@@ -68,10 +68,10 @@ Claude's tmux session is the live listener and an observability surface. Codex r
 
 | Asset | Why it matters | Main controls | Remaining risk |
 | --- | --- | --- | --- |
-| Discord bot tokens | Let a process act as each bot | Separate Keychain accounts, dedicated bots, no argv or disk secrets, environment minimization, direct Keychain-to-process Claude launch | Same-user full access may inspect process memory or environment or query Keychain; a leaked token works outside Threadkeep |
+| Discord bot tokens | Let a process act as each bot | Separate Keychain accounts, dedicated bots, no argv or disk secrets, environment minimization, direct Keychain-to-process Claude launch | Same-user full access may inspect process memory or environment or query Keychain; a leaked token works outside Disco Party |
 | Owner identity | Authorizes Codex ingress and Claude review buttons | Immutable Discord snowflake checks, exact guild, channel, application, bot, event, and message type binding | Owner Discord account takeover defeats this boundary |
 | ChatGPT credential | Gives Codex subscription access | Isolated `CODEX_HOME`, exact official keyring backend, no API key, filesystem-credential rejection, `account/read` binding | Same-user full access may query Keychain; keyring is separation, not hard containment |
-| Threadkeep code and config | Define authorization and runtime behavior | Workspace overlap rejection, path ownership checks, runtime pins, isolated config, untrusted project roots | Same-user full access can alter user-owned control files |
+| Disco Party code and config | Define authorization and runtime behavior | Workspace overlap rejection, path ownership checks, runtime pins, isolated config, untrusted project roots | Same-user full access can alter user-owned control files |
 | Conversation state | Prevents context loss and duplicate work | Durable queue, SQLite transactions, leases, fencing, policy fingerprints, append-once markers | Full compromise can alter state; uncertain external effects cannot always be undone |
 | Discord output | May expose local or private data | Mention suppression, best-effort credential, card, and public-mode personal-detail masking, size limits | Redact-never-withhold filtering is not a confidentiality boundary and may miss sensitive material |
 | Shared Vault skills | Become trusted per-turn instructions | Exact four-skill allowlist, full closure hash, path and ownership validation, policy binding, skill-finder on every turn, per-turn rechecks | Same-user full access can race or modify skills during an active turn |
@@ -93,17 +93,17 @@ The bot requires only the operational permission set. Broad guild management and
 
 Safe mode uses a custom root-deny, temporary-directory-deny, agent-network-off permission profile scoped to one workspace. Full mode selects OpenAI's `:danger-full-access` profile and removes local sandbox restrictions only after the exact acknowledgment passes. Either destination-trust mode may select either execution profile. A separate operating-system identity or process broker remains the stronger containment design.
 
-Both modes still run as the logged-in macOS user. Threadkeep's isolated directories are separation within that account, not a separate security principal.
+Both modes still run as the logged-in macOS user. Disco Party's isolated directories are separation within that account, not a separate security principal.
 
 ### Model-provider boundary
 
-Claude and Codex use their official subscription clients. Codex requires managed ChatGPT authentication and refuses an OpenAI API key. Threadkeep never converts ChatGPT OAuth material into an API credential or sends the Discord token to App Server.
+Claude and Codex use their official subscription clients. Codex requires managed ChatGPT authentication and refuses an OpenAI API key. Disco Party never converts ChatGPT OAuth material into an API credential or sends the Discord token to App Server.
 
-Threadkeep requires exact Keychain mode and rejects filesystem credential artifacts. It hashes the nonsecret email and plan facts returned by the authenticated App Server into durable policy without logging the email. The official Codex client, macOS Keychain, and OpenAI service own credential storage and upstream authentication.
+Disco Party requires exact Keychain mode and rejects filesystem credential artifacts. It hashes the nonsecret email and plan facts returned by the authenticated App Server into durable policy without logging the email. The official Codex client, macOS Keychain, and OpenAI service own credential storage and upstream authentication.
 
 ### Third-party content boundary
 
-Every Discord message, repository file, webpage, attachment, tool result, and externally retrieved item remains untrusted task content. Workspace `AGENTS.md` and fallback project instruction files are disabled for the headless Codex bridge. Only Threadkeep's built-in instructions, the exact four canonical shared skills, and the separately validated instruction file may enter the trusted instruction plane. In full mode, the canonical Vault `CLAUDE.md` is selected automatically when no other trusted instruction file is configured.
+Every Discord message, repository file, webpage, attachment, tool result, and externally retrieved item remains untrusted task content. Workspace `AGENTS.md` and fallback project instruction files are disabled for the headless Codex bridge. Only Disco Party's built-in instructions, the exact four canonical shared skills, and the separately validated instruction file may enter the trusted instruction plane. In full mode, the canonical Vault `CLAUDE.md` is selected automatically when no other trusted instruction file is configured.
 
 ## Findings and remediation
 
@@ -123,12 +123,12 @@ Severity reflects the intended full-access, public-channel deployment.
 | Critical | The first Codex authentication design forced plaintext file-store `auth.json` | Fixed before deployment. The isolated config now requires exact `keyring`, disables filesystem secret storage, keeps canonical macOS `HOME` for default Keychain access, and rejects `auth.json` and sibling artifacts throughout startup and turns. |
 | High | The Codex installer and runtime retained a Discord bot-token environment fallback | Fixed before deployment. Production reads the Codex bot token only from its dedicated Keychain account. Interactive installation accepts a silent terminal input, while non-interactive installation requires a pre-provisioned Keychain item or the separately reviewed Keychain-to-Keychain legacy import. |
 | High | Public members could create arbitrary threads and expand the bot's managed-thread inventory | Fixed before deployment. The verifier requires an explicit `@everyone` deny for Manage Threads, Create Public Threads, and Create Private Threads; requires Create Public Threads to be restored only by the configured bot's member overwrite; and rejects role, bot-role, and other-member restoration paths. Guild owners and Administrator members remain trusted because Discord lets them bypass channel overwrites. |
-| High | Canonical Vault P0 rules could diverge between unattended Claude and Codex workers | Fixed. Threadkeep mechanically derives one private snapshot from the six canonical P0 sections, rejects heading or content drift, binds the source and snapshot hashes, revalidates around every Codex turn, and supplies the same derived policy to Claude at launcher startup. |
-| Critical | Official Codex `PreToolUse` hooks fail open when the hook framework or process fails outside the supported exit-code-2 denial path | Accepted only for explicit danger-full-access after the exact acknowledgment. Threadkeep binds and attests the exact three canonical hooks as defense in depth, rejects their reported failures, and uses a deny-only outbound hook. Workspace-write retains its sandbox boundary regardless of destination trust. |
-| Critical | The first shared-hook design executed canonical workspace scripts directly from an unsandboxed hook process, so the hook working directory and Python environment could influence imports before validation ran | Fixed before deployment. Threadkeep binds the complete source closure, publishes a private content-addressed snapshot outside every writable root, requires exact modes and single-link files, and invokes absolute `/usr/bin/python3 -I -S` commands. Hostile working-directory and environment regression tests cover module shadowing and startup customization. Hooks remain guardrails; full mode accepts rather than removes their residual failure risk. |
+| High | Canonical Vault P0 rules could diverge between unattended Claude and Codex workers | Fixed. Disco Party mechanically derives one private snapshot from the six canonical P0 sections, rejects heading or content drift, binds the source and snapshot hashes, revalidates around every Codex turn, and supplies the same derived policy to Claude at launcher startup. |
+| Critical | Official Codex `PreToolUse` hooks fail open when the hook framework or process fails outside the supported exit-code-2 denial path | Accepted only for explicit danger-full-access after the exact acknowledgment. Disco Party binds and attests the exact three canonical hooks as defense in depth, rejects their reported failures, and uses a deny-only outbound hook. Workspace-write retains its sandbox boundary regardless of destination trust. |
+| Critical | The first shared-hook design executed canonical workspace scripts directly from an unsandboxed hook process, so the hook working directory and Python environment could influence imports before validation ran | Fixed before deployment. Disco Party binds the complete source closure, publishes a private content-addressed snapshot outside every writable root, requires exact modes and single-link files, and invokes absolute `/usr/bin/python3 -I -S` commands. Hostile working-directory and environment regression tests cover module shadowing and startup customization. Hooks remain guardrails; full mode accepts rather than removes their residual failure risk. |
 | Medium | One serial Codex model worker would make unrelated Discord threads block each other | Fixed with a bounded one-through-four worker pool, default three. SQLite claims allow independent destinations to overlap while serializing one destination and blocking unresolved uncertain work. Built-in multi-agent remains disabled because the bridge cannot yet attest descendant lifecycle or hook events. |
-| Medium | App Server's online skill-root documentation does not match installed `0.151.0` schema behavior | Compensated. Threadkeep uses an exact private four-link bridge and verifies the real `skills/list` result instead of relying on the ignored field. Skill-finder discovers the broader canonical Vault through ordinary full-mode shell and file access. |
-| Medium | App Server advertises `thread/items/list`, but installed `0.151.0` returns method-not-supported | Documented. Threadkeep does not use unavailable item pagination as verification evidence. |
+| Medium | App Server's online skill-root documentation does not match installed `0.151.0` schema behavior | Compensated. Disco Party uses an exact private four-link bridge and verifies the real `skills/list` result instead of relying on the ignored field. Skill-finder discovers the broader canonical Vault through ordinary full-mode shell and file access. |
+| Medium | App Server advertises `thread/items/list`, but installed `0.151.0` returns method-not-supported | Documented. Disco Party does not use unavailable item pagination as verification evidence. |
 | Medium | Full-access language implied ChatGPT desktop Browser and Computer Use parity | Corrected. Full mode grants broad command authority but no first-class visual desktop host in this bridge. |
 | Medium | Public-output filtering could be read as complete DLP | Corrected. It is best-effort redact-never-withhold masking for common patterns and excessive output, not a secrecy guarantee or confidentiality boundary. |
 | Low | Production Python used an `assert` for an idempotency invariant | Fixed with an explicit runtime failure. |
@@ -150,7 +150,7 @@ Both providers use Discord's event-driven Gateway, not a message-polling cron.
 
 ## ChatGPT subscription authentication
 
-Threadkeep uses a separately scoped Codex login rather than the user's normal `~/.codex` state:
+Disco Party uses a separately scoped Codex login rather than the user's normal `~/.codex` state:
 
 1. The installer keeps canonical macOS `HOME` for Keychain access and creates a private isolated `CODEX_HOME`.
 2. The isolated config sets `forced_login_method = "chatgpt"`.
@@ -165,7 +165,7 @@ This uses the user's ChatGPT subscription entitlement. It does not call the Open
 
 ## App Server and bleeding-edge features
 
-Threadkeep deliberately opts into the official experimental App Server capability because the owner accepted official bleeding-edge OpenAI features. It compensates for protocol maturity with strict pinning:
+Disco Party deliberately opts into the official experimental App Server capability because the owner accepted official bleeding-edge OpenAI features. It compensates for protocol maturity with strict pinning:
 
 - Codex CLI `0.151.0`
 - exact launcher and native arm64 binary hashes
@@ -176,27 +176,27 @@ Threadkeep deliberately opts into the official experimental App Server capabilit
 - Ultra reasoning
 - model fallback disabled
 
-Unknown server requests fail closed. Interactive approval, elicitation, and unexpected tool paths receive explicit deny, abort, empty, or unsuccessful responses. Threadkeep never calls App Server's user-initiated `thread/shellCommand`, which the official documentation states runs outside the sandbox.
+Unknown server requests fail closed. Interactive approval, elicitation, and unexpected tool paths receive explicit deny, abort, empty, or unsuccessful responses. Disco Party never calls App Server's user-initiated `thread/shellCommand`, which the official documentation states runs outside the sandbox.
 
 An updated Codex CLI is not accepted automatically. Each update requires schema generation, request review, pin changes, unit tests, real preflight, and live Discord acceptance.
 
 ### Canonical lifecycle-hook guardrails
 
-Threadkeep derives the reviewed canonical Vault hook closure into a content-addressed private read-only runtime snapshot outside every writable root. Its isolated user-level `hooks.json` contains exactly three synchronous `PreToolUse` definitions and points only to that snapshot:
+Disco Party derives the reviewed canonical Vault hook closure into a content-addressed private read-only runtime snapshot outside every writable root. Its isolated user-level `hooks.json` contains exactly three synchronous `PreToolUse` definitions and points only to that snapshot:
 
 1. The command-safety validator for supported Bash tools.
 2. The written-text validator for supported Bash and `apply_patch` tools.
-3. The outbound-send validator in an explicit Threadkeep deny-only mode.
+3. The outbound-send validator in an explicit Disco Party deny-only mode.
 
 The bridge binds the canonical source closure, sealed snapshot, manifest, and hook configuration. Snapshot directories are mode `0500`; files are single-link mode `0400`; commands use absolute `/usr/bin/python3 -I -S` paths and do not import from the working directory. Before startup and around turns, `hooks/list` must report the exact source path, source type, command, anchored matcher, timeout, current definition hash, enabled state, and expected trust state with no errors, warnings, plugin hooks, managed hooks, or extra entries. Hook start and completion notifications are monitored, and failed, stopped, malformed, or unexpected runs abort further work.
 
-These checks detect drift and ordinary validator failures. They do not turn Hooks into authorization. OpenAI documents that hosted tools are not hooked and specialized paths can opt out. The tested CLI also permits a tool to continue when the hook process or framework fails outside a successful exit-code-2 denial. A later App Server abort cannot reverse an effect that already happened. Threadkeep therefore uses Hooks only as guardrails. Danger-full-access proceeds only after explicit acceptance of that residual risk.
+These checks detect drift and ordinary validator failures. They do not turn Hooks into authorization. OpenAI documents that hosted tools are not hooked and specialized paths can opt out. The tested CLI also permits a tool to continue when the hook process or framework fails outside a successful exit-code-2 denial. A later App Server abort cannot reverse an effect that already happened. Disco Party therefore uses Hooks only as guardrails. Danger-full-access proceeds only after explicit acceptance of that residual risk.
 
 ## Why full computer access requires acceptance
 
-OpenAI's official permission model says `:danger-full-access` removes local sandbox restrictions. In this bridge that means broad same-user command authority, including shell, filesystem, process, and command-based network access where macOS permits it. A prompt-injected process could bypass instructions and Hooks by making a raw network connection, invoking an unhooked path, modifying same-user controls, or exploiting a hook failure. Exact operator acknowledgment does not change that technical boundary. Threadkeep permits the mode only after the exact acknowledgment, independently of whether the destination is public or owner-private.
+OpenAI's official permission model says `:danger-full-access` removes local sandbox restrictions. In this bridge that means broad same-user command authority, including shell, filesystem, process, and command-based network access where macOS permits it. A prompt-injected process could bypass instructions and Hooks by making a raw network connection, invoking an unhooked path, modifying same-user controls, or exploiting a hook failure. Exact operator acknowledgment does not change that technical boundary. Disco Party permits the mode only after the exact acknowledgment, independently of whether the destination is public or owner-private.
 
-It does not add a visual host. OpenAI documents Browser as unavailable in Codex CLI and provides Computer Use through a separate ChatGPT desktop plugin with Screen Recording, Accessibility, app approvals, and its own host process. Threadkeep's App Server client supplies no such host and sends an empty `dynamicTools` list.
+It does not add a visual host. OpenAI documents Browser as unavailable in Codex CLI and provides Computer Use through a separate ChatGPT desktop plugin with Screen Recording, Accessibility, app approvals, and its own host process. Disco Party's App Server client supplies no such host and sends an empty `dynamicTools` list.
 
 Therefore, in the current design:
 
@@ -227,9 +227,9 @@ The Vault remains the single source of truth. Claude uses its canonical `.claude
 - `marketing/websites/vinaytalks`
 - `triage`
 
-Threadkeep rejects extra entries, redirected links, symlinked skill content, hardlinked files, unsafe owners or modes, oversized closures, unsupported file types, and unstable descriptor reads. It hashes every regular file in all four closures, binds the manifest to durable policy, requires `skills/list` to return exactly those four canonical paths, revalidates before each turn, and rechecks immediately after `turn/start`.
+Disco Party rejects extra entries, redirected links, symlinked skill content, hardlinked files, unsafe owners or modes, oversized closures, unsupported file types, and unstable descriptor reads. It hashes every regular file in all four closures, binds the manifest to durable policy, requires `skills/list` to return exactly those four canonical paths, revalidates before each turn, and rechecks immediately after `turn/start`.
 
-The same Vault also supplies the six canonical P0 policy sections. Threadkeep locates them by exact heading, rejects missing, reordered, renamed, or additional P0 sections, writes a private mode `0400` derived snapshot, and binds source path and hash plus snapshot path and hash into the Codex policy fingerprint. Codex validates the seal before and after each turn. Claude validates the same seal before its Keychain read at launcher startup and appends the snapshot to listener and Agent subagent system prompts. That Claude prompt inheritance is defense in depth, not deterministic per-turn containment.
+The same Vault also supplies the six canonical P0 policy sections. Disco Party locates them by exact heading, rejects missing, reordered, renamed, or additional P0 sections, writes a private mode `0400` derived snapshot, and binds source path and hash plus snapshot path and hash into the Codex policy fingerprint. Codex validates the seal before and after each turn. Claude validates the same seal before its Keychain read at launcher startup and appends the snapshot to listener and Agent subagent system prompts. That Claude prompt inheritance is defense in depth, not deterministic per-turn containment.
 
 Routing behavior is deterministic:
 
@@ -248,7 +248,7 @@ Residual risk remains in full mode because the skill source and worker share one
 
 Claude can post an exact draft with native buttons. The router binds the review to the owner, application, guild, bot, channel, message, interaction, action, target, draft SHA-256, binding digest, and expiry. The waiting request consumes the marker and returns a review reference.
 
-That reference does not authorize an outbound side effect. Threadkeep installs no sender, and the obsolete marker-watcher service is removed. A future gate must mint and consume a short-lived one-time private receipt under a lock, recompute the exact content and destination, reject replay, keep content out of argv, and hold outbound credentials outside the model process. A separate OS identity is the recommended boundary for a full-access worker.
+That reference does not authorize an outbound side effect. Disco Party installs no sender, and the obsolete marker-watcher service is removed. A future gate must mint and consume a short-lived one-time private receipt under a lock, recompute the exact content and destination, reject replay, keep content out of argv, and hold outbound credentials outside the model process. A separate OS identity is the recommended boundary for a full-access worker.
 
 ### Codex
 
@@ -307,12 +307,12 @@ Once the replacement accepts new work, automatic rollback to the old consumer is
 
 Claude:
 
-- `tmux attach -t threadkeep-chat` opens the actual listener.
+- `tmux attach -t discoparty-chat` opens the actual listener.
 - The healthcheck validates the exact session, directory, command, process tree, and readiness token.
 
 Codex:
 
-- `tmux attach -t threadkeep-codex` opens a read-only monitor.
+- `tmux attach -t discoparty-codex` opens a read-only monitor.
 - `PYTHONPATH=. python3 -m codex_discord_bridge.monitor --once` renders one snapshot.
 - The monitor shows accepted owner input, job states, and sanitized Codex delivery content.
 - Closing the monitor does not stop the LaunchAgent.
@@ -383,7 +383,7 @@ Do not activate until every item is complete:
 - [ ] Codex preflight proves owner, bot, application, guild, channel, permission, and visibility boundaries.
 - [ ] The `@everyone` thread deny and exact bot-member Create Public Threads restoration pass, with no role or other-member restoration.
 - [ ] Public trust keeps the `@everyone` View baseline effective, or owner-private trust proves the exact `@everyone` View deny, owner and bridge member allows, absence of all other View allows, and absence of every other effective reader.
-- [ ] The Codex workspace does not overlap Threadkeep control paths or the shared-skill root.
+- [ ] The Codex workspace does not overlap Disco Party control paths or the shared-skill root.
 - [ ] The canonical Vault P0 source and private snapshot match the exact bound seal.
 - [ ] The canonical hook source closure, private read-only runtime snapshot, manifest, and isolated `hooks.json` match policy, with no path back into a writable root.
 - [ ] App Server `hooks/list` reports the exact source, source path, commands, matchers, timeouts, enabled states, current hashes, and expected trust states with no errors, warnings, or extra hooks.

@@ -15,11 +15,11 @@ from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-os.environ.setdefault("THREADKEEP_CONFIG", str(REPO_ROOT / "config.example.toml"))
-os.environ.setdefault("THREADKEEP_OWNER_USER_ID", "111111111111111111")
-os.environ.setdefault("THREADKEEP_DISCORD_APPLICATION_ID", "222222222222222222")
-os.environ.setdefault("THREADKEEP_DISCORD_BOT_USER_ID", "333333333333333333")
-os.environ.setdefault("THREADKEEP_DISCORD_GUILD_ID", "444444444444444444")
+os.environ.setdefault("DISCOPARTY_CONFIG", str(REPO_ROOT / "config.example.toml"))
+os.environ.setdefault("DISCOPARTY_OWNER_USER_ID", "111111111111111111")
+os.environ.setdefault("DISCOPARTY_DISCORD_APPLICATION_ID", "222222222222222222")
+os.environ.setdefault("DISCOPARTY_DISCORD_BOT_USER_ID", "333333333333333333")
+os.environ.setdefault("DISCOPARTY_DISCORD_GUILD_ID", "444444444444444444")
 sys.path.insert(0, str(REPO_ROOT / "conversations"))
 
 import bun_runtime  # noqa: E402
@@ -292,8 +292,8 @@ class ClaudeLauncherEnvironmentTests(unittest.TestCase):
                 "CLAUDE_BIN": "/tmp/evil",
                 "DISCORD_BOT_TOKEN": "poison",
                 "OPENAI_API_KEY": "poison",
-                "THREADKEEP_CONFIG": "/tmp/evil",
-                "THREADKEEP_REPO_ROOT": "/tmp/evil",
+                "DISCOPARTY_CONFIG": "/tmp/evil",
+                "DISCOPARTY_REPO_ROOT": "/tmp/evil",
                 "TMUX": "/tmp/poison",
             }
         )
@@ -323,15 +323,15 @@ class ClaudeLauncherEnvironmentTests(unittest.TestCase):
                 line.split("=", 1)
                 for line in result.stdout.splitlines()
                 if "=" in line
-            )["THREADKEEP_REPO_ROOT"],
+            )["DISCOPARTY_REPO_ROOT"],
             str(REPO_ROOT),
         )
 
     def test_installer_refuses_credential_files_instead_of_sourcing_them(self) -> None:
         installer = (REPO_ROOT / "install.sh").read_text()
-        self.assertNotIn('source "$SCRIPT_DIR/.threadkeep.env"', installer)
+        self.assertNotIn('source "$SCRIPT_DIR/.discoparty.env"', installer)
         self.assertIn(
-            '[ -e "$SCRIPT_DIR/.threadkeep.env" ]',
+            '[ -e "$SCRIPT_DIR/.discoparty.env" ]',
             installer,
         )
         self.assertIn("credential files are forbidden", installer)
@@ -493,7 +493,7 @@ class ClaudeLauncherEnvironmentTests(unittest.TestCase):
                 **sealed.environment(),
                 "DISCORD_STATE_DIR": str(runtime),
             }
-            environment["THREADKEEP_VAULT_POLICY_SOURCE_SHA256"] = "0" * 64
+            environment["DISCOPARTY_VAULT_POLICY_SOURCE_SHA256"] = "0" * 64
             with self.assertRaisesRegex(RuntimeError, "environment changed"):
                 listener_contract.validate_runtime_policy_from_environment(
                     environment
@@ -610,7 +610,7 @@ class ClaudeLauncherEnvironmentTests(unittest.TestCase):
             main.index("confirm_config_write_and_authority"),
             main.index("remove_stale_marker_watcher"),
         )
-        self.assertIn("THREADKEEP_CLAUDE_FULL_AUTHORITY=1", installer)
+        self.assertIn("DISCOPARTY_CLAUDE_FULL_AUTHORITY=1", installer)
         self.assertIn("Type FULL LOCAL AUTHORITY", installer)
         self.assertIn("use_dangerously_skip_permissions = true", installer)
         self.assertIn('cx-chat-healthcheck.sh" ||', installer)

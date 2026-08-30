@@ -76,7 +76,7 @@ DISCORD_PAGE_SIZE = 100
 TAKEOVER_DRAIN_TTL_SECONDS = 15 * 60
 # Public protocol marker, not a credential.
 TAKEOVER_DRAIN_TOKEN_PREFIX = (  # nosec B105
-    "THREADKEEP_TAKEOVER_DRAIN_COMPLETE_v1_4c18a7d2:"
+    "DISCOPARTY_TAKEOVER_DRAIN_COMPLETE_v1_4c18a7d2:"
 )
 TAKEOVER_DRAIN_CHALLENGE = re.compile(r"^[a-f0-9]{64}$")
 DISPATCH_OPERATION_STATES = frozenset(
@@ -606,7 +606,7 @@ def create_backup(
         {
             "takeover_id": takeover_id,
             "files": approval_inventory,
-            "policy": "Legacy approval schemas are not imported into Threadkeep.",
+            "policy": "Legacy approval schemas are not imported into Disco Party.",
         },
     )
     snapshot_path = backup_dir / "sqlite" / "mq.sqlite3.snapshot"
@@ -1497,7 +1497,7 @@ def _reviewed_legacy_descendant(command: str) -> bool:
         return True
     return executable in {"bun", "node"} and "discord" in lowered and (
         "claude-plugins-official" in lowered
-        or "application support/threadkeep/claude-discord" in lowered
+        or "application support/discoparty/claude-discord" in lowered
         or ".claude/plugins" in lowered
     )
 
@@ -1520,7 +1520,7 @@ def _expected_replacement_arguments(
         str(
             (
                 Path(pwd.getpwuid(os.getuid()).pw_dir)
-                / "Library/Application Support/Threadkeep/claude-discord"
+                / "Library/Application Support/Discoparty/claude-discord"
                 / listener_contract.POLICY_DIRECTORY_NAME
                 / listener_contract.RUNTIME_PROMPT_NAME
             ).resolve()
@@ -2070,7 +2070,7 @@ class MacHost:
         captured = _run(
             [self.tmux, "capture-pane", "-p", "-t", f"={session}:0.0", "-S", "-2000"]
         ).stdout
-        if "THREADKEEP_LISTENER_READY_v1_7f29c4b1" not in captured:
+        if "DISCOPARTY_LISTENER_READY_v1_7f29c4b1" not in captured:
             raise TakeoverError("replacement listener readiness token is absent")
 
     def run_takeover_drain(
@@ -2113,7 +2113,7 @@ class MacHost:
         if expected in capture():
             raise TakeoverError("takeover drain challenge was already present")
         prompt = (
-            "Run the pending Threadkeep takeover drain defined in your pinned "
+            "Run the pending Disco Party takeover drain defined in your pinned "
             f"system prompt. Challenge={challenge} Deadline={int(expires_at)}."
         )
         _run([self.tmux, "send-keys", "-t", target, prompt, "Enter"])

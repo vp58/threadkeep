@@ -153,7 +153,7 @@ def chatgpt_account_binding(result: object) -> ChatGPTAccountBinding:
     ):
         raise RuntimeError("Codex App Server returned a malformed ChatGPT identity")
     identity = email.encode("utf-8")
-    digest = hashlib.sha256(b"threadkeep-chatgpt-account-read-v2\0")
+    digest = hashlib.sha256(b"discoparty-chatgpt-account-read-v2\0")
     for component in (identity, plan_type.encode("ascii")):
         digest.update(len(component).to_bytes(4, "big"))
         digest.update(component)
@@ -475,7 +475,7 @@ def _logout_configured_chatgpt() -> None:
     from .config import Config
     from .codex_policy import validate_isolated_config
 
-    config = Config.from_threadkeep()
+    config = Config.from_discoparty()
     safe_mode = config.sandbox_mode == "workspace-write"
     validate_isolated_config(config.codex_home, config.working_directory, safe_mode)
     try:
@@ -493,11 +493,11 @@ def _logout_configured_chatgpt() -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Threadkeep Codex auth lifecycle")
+    parser = argparse.ArgumentParser(description="Disco Party Codex auth lifecycle")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser(
         "logout-configured",
-        help="logout the exact isolated ChatGPT credential from Threadkeep config",
+        help="logout the exact isolated ChatGPT credential from Disco Party config",
     )
     args = parser.parse_args(argv)
     if args.command == "logout-configured":

@@ -27,7 +27,7 @@ from config import CONFIG  # noqa: E402
 from public_output import public_safe_output, withheld_notice  # noqa: E402
 
 APPROVAL_DIR = Path(
-    os.environ.get("THREADKEEP_DISCORD_SCRIPTS", str(_HERE.parent / "approval"))
+    os.environ.get("DISCOPARTY_DISCORD_SCRIPTS", str(_HERE.parent / "approval"))
 ).expanduser()
 CREATE_THREAD = APPROVAL_DIR / "create_thread.py"
 
@@ -85,7 +85,7 @@ def _read_stdin() -> dict[str, Any]:
 def _safe_title(value: str) -> str:
     title = public_safe_output(value.strip(), agent_name="Claude")
     if title == withheld_notice("Claude"):
-        title = "Threadkeep conversation"
+        title = "Disco Party conversation"
     title = " ".join(title.split())[:100].strip()
     if not title:
         raise RuntimeError("dispatch title became empty after public-output filtering")
@@ -148,7 +148,7 @@ def dispatch_claimed(message_id: str, supplied_title: str | None) -> dict[str, A
             source_thread_id = str(row["chat_id"])
             session_id = lib.thread_to_session(source_thread_id)
             if not session_id:
-                raise RuntimeError("reply thread is not owned by Threadkeep")
+                raise RuntimeError("reply thread is not owned by Disco Party")
             fm, _body, _path = lib.load_conversation(session_id)
             if str(fm.get("discord_thread_id") or "") != source_thread_id:
                 raise RuntimeError("conversation registry and transcript thread binding disagree")

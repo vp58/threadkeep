@@ -1,4 +1,4 @@
-# Threadkeep dual Discord orchestrator implementation inventory
+# Disco Party dual Discord orchestrator implementation inventory
 
 Date: 2026-08-29
 
@@ -34,7 +34,7 @@ Adds the separate #chatgpt Gateway, durable App Server worker, ChatGPT subscript
 - **Added:** `codex_discord_bridge/trusted_instructions.py`
 - **Added:** `install-codex.sh`
 - **Added:** `launchd/codex-monitor.sh`
-- **Added:** `launchd/templates/com.threadkeep.codex-discord-bridge.plist.template`
+- **Added:** `launchd/templates/com.discoparty.codex-discord-bridge.plist.template`
 - **Added:** `requirements-macos-arm64.lock`
 
 ## Claude provider and shared Discord core

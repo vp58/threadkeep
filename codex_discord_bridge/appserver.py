@@ -84,10 +84,10 @@ class CodexAppServer:
         self.codex_bin = codex_bin
         self.work_dir = work_dir
         self.workspace_dir = workspace_dir or Path(
-            os.environ.get("THREADKEEP_CODEX_WORKING_DIRECTORY", str(work_dir))
+            os.environ.get("DISCOPARTY_CODEX_WORKING_DIRECTORY", str(work_dir))
         )
         self.sandbox_mode = sandbox_mode or os.environ.get(
-            "THREADKEEP_CODEX_SANDBOX_MODE", "workspace-write"
+            "DISCOPARTY_CODEX_SANDBOX_MODE", "workspace-write"
         )
         if self.sandbox_mode not in {"workspace-write", "danger-full-access"}:
             raise ValueError("unsupported Codex sandbox mode")
@@ -101,7 +101,7 @@ class CodexAppServer:
             )
         self.codex_home = codex_home or work_dir.parent / "home/.codex"
         self.worker_home = canonical_user_home()
-        self.tmp_dir = self.workspace_dir / ".threadkeep-tmp"
+        self.tmp_dir = self.workspace_dir / ".discoparty-tmp"
         self.instructions_file = instructions_file
         self.instructions_sha256 = instructions_sha256
         self.account_binding = account_binding
@@ -156,7 +156,7 @@ class CodexAppServer:
             instructions
             + "\n\nCanonical sealed Vault P0 policy:\n"
             + vault_policy
-            + "\n\nAdditional trusted workspace instructions supplied by Threadkeep:\n"
+            + "\n\nAdditional trusted workspace instructions supplied by Disco Party:\n"
             + trusted.text
         )
 
@@ -278,7 +278,7 @@ class CodexAppServer:
             if not isinstance(cursor, str) or not cursor:
                 raise ProtocolError("permissionProfile/list returned an invalid cursor")
         if len(matches) != 1 or matches[0].get("allowed") is not True:
-            raise ProtocolError("the reviewed Threadkeep permission profile is unavailable")
+            raise ProtocolError("the reviewed Disco Party permission profile is unavailable")
 
     async def _require_effective_config(self) -> None:
         result = await self.request(
@@ -437,7 +437,7 @@ class CodexAppServer:
         if config.get("shell_environment_policy") != expected_shell_environment_policy:
             raise ProtocolError("Codex effective shell environment policy changed")
         expected_effective_profile = {
-            "description": "Threadkeep workspace-only policy",
+            "description": "Disco Party workspace-only policy",
             "extends": ":workspace",
             "filesystem": {
                 ":minimal": "read",
@@ -742,7 +742,7 @@ class CodexAppServer:
     async def start(self) -> None:
         self.work_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.workspace_dir = self.workspace_dir.resolve(strict=True)
-        self.tmp_dir = self.workspace_dir / ".threadkeep-tmp"
+        self.tmp_dir = self.workspace_dir / ".discoparty-tmp"
         validate_isolated_config(self.codex_home, self.workspace_dir, self.safe_mode)
         reject_filesystem_credentials(self.codex_home)
         self._bound_vault_policy()

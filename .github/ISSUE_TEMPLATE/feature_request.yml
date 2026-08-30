@@ -15,7 +15,7 @@ body:
     id: solution
     attributes:
       label: Proposed solution
-      description: What you would like Threadkeep to do.
+      description: What you would like Disco Party to do.
     validations:
       required: true
   - type: textarea

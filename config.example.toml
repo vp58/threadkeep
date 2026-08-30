@@ -1,8 +1,8 @@
-# Threadkeep configuration.
+# Disco Party configuration.
 #
 # Copy this file to config.toml and fill in the values for your install.
 # Every key here can also be set via an environment variable prefixed with
-# THREADKEEP_ (see conversations/config.py for the exact mapping). Env vars
+# DISCOPARTY_ (see conversations/config.py for the exact mapping). Env vars
 # always win over the TOML file so you can keep secrets out of the repo.
 
 [paths]
@@ -11,7 +11,7 @@
 workspace_root = "~/TheSystem"
 conversations_dir = "~/TheSystem/conversations"
 # Optional. If unset, each component logs to its own file under the repo.
-# log_file = "~/.threadkeep/threadkeep.log"
+# log_file = "~/.discoparty/discoparty.log"
 
 [discord]
 # Guild, application, and bot identity are pinned so a different credential
@@ -19,9 +19,9 @@ conversations_dir = "~/TheSystem/conversations"
 guild_id = "000000000000000000"
 bot_user_id = "000000000000000000"
 application_id = "000000000000000000"
-# Channel id Threadkeep listens to. Top-level posts here become new threads.
+# Channel id Disco Party listens to. Top-level posts here become new threads.
 chat_channel_id = "000000000000000000"
-# Channel id Threadkeep posts errors and stderr to.
+# Channel id Disco Party posts errors and stderr to.
 errors_channel_id = "000000000000000000"
 # Discord user id of the owner. Only this user's review-button presses are
 # honored by the router. A review reference alone does not authorize a send.
@@ -29,12 +29,12 @@ owner_user_id = "000000000000000000"
 # Env var name the bot token is read from at runtime. Default is fine.
 token_env_var = "DISCORD_BOT_TOKEN"
 # Normal macOS installs resolve the token from this Keychain item.
-keychain_service = "threadkeep-secret"
+keychain_service = "discoparty-secret"
 keychain_account = "discord-bot-token"
-# Dedicated state for the official Claude Discord channel plugin. Threadkeep
+# Dedicated state for the official Claude Discord channel plugin. Disco Party
 # writes and verifies the static owner-only allowlist, then the launcher injects
 # the Keychain token directly into the pinned process. A stale .env blocks launch.
-plugin_state_dir = "~/Library/Application Support/Threadkeep/claude-discord"
+plugin_state_dir = "~/Library/Application Support/Discoparty/claude-discord"
 [runtime]
 timezone = "UTC"
 max_messages_per_minute = 5
@@ -67,12 +67,12 @@ application_id = "000000000000000000"
 channel_trust = "public"
 working_directory = "~/path/to/your-workspace"
 # Installer and runtime require an explicit subpath below the canonical
-# ~/Library/Application Support/Threadkeep root and reject unsafe ancestry.
-state_dir = "~/Library/Application Support/Threadkeep/codex-discord"
-codex_home = "~/Library/Application Support/Threadkeep/codex-discord/home/.codex"
+# ~/Library/Application Support/Discoparty root and reject unsafe ancestry.
+state_dir = "~/Library/Application Support/Discoparty/codex-discord"
+codex_home = "~/Library/Application Support/Discoparty/codex-discord/home/.codex"
 codex_bin = "/opt/homebrew/bin/codex"
 
-# workspace-write selects Threadkeep's custom root-deny, network-off profile.
+# workspace-write selects Disco Party's custom root-deny, network-off profile.
 # Sandbox authority is independent of channel_trust. danger-full-access
 # requires the explicit full-computer-access acceptance below.
 sandbox_mode = "workspace-write"
@@ -86,7 +86,7 @@ full_computer_access_accepted = false
 
 # Optional trusted base-instruction file. Keep it outside working_directory.
 # Workspace AGENTS.md and fallback project documents are not auto-loaded.
-# instructions_file = "~/.threadkeep/CODEX.md"
+# instructions_file = "~/.discoparty/CODEX.md"
 
 # One canonical skill source shared with Claude. This must resolve exactly to
 # [paths].workspace_root/x_System/Skills. The installer creates four validated
@@ -108,5 +108,5 @@ max_database_bytes = 268435456
 # The Codex bot token is kept separate from the Claude bot token and exists
 # only in macOS Keychain. Noninteractive installs require this exact entry to
 # be provisioned before the installer starts; environment overrides are denied.
-keychain_service = "threadkeep-secret"
+keychain_service = "discoparty-secret"
 keychain_account = "discord-bot-token-codex"

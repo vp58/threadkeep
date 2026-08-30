@@ -1,10 +1,10 @@
-# Contributing to Threadkeep
+# Contributing to Disco Party
 
-Thanks for taking the time to improve Threadkeep. This project now has two provider paths with different runtimes and security contracts. Keep changes focused and preserve the boundary between them.
+Thanks for taking the time to improve Disco Party. This project now has two provider paths with different runtimes and security contracts. Keep changes focused and preserve the boundary between them.
 
 ## Filing an issue
 
-Open a GitHub issue at https://github.com/vp58/threadkeep/issues and include:
+Open a GitHub issue at https://github.com/vp58/discoparty/issues and include:
 
 - Which provider is affected: Claude, Codex, or shared configuration
 - What you were trying to do
@@ -45,7 +45,7 @@ Large changes should start with an issue that describes the intended trust model
 - A Claude feature must not depend on the Codex CLI, ChatGPT login, SQLite job store, or LaunchAgent.
 - Shared configuration changes must load older Claude-only configurations with safe Codex defaults.
 - A writable Codex workspace must never overlap the repository, config, state, or logs control plane.
-- New Codex authority defaults to Threadkeep's custom root-deny `threadkeep-workspace-only` profile with agent-tool network disabled.
+- New Codex authority defaults to Disco Party's custom root-deny `discoparty-workspace-only` profile with agent-tool network disabled.
 - `danger-full-access` remains an explicit high-risk opt-in. Changes to its exact acknowledgement, owner-only ingress, public-output sanitization, or fail-closed runtime checks require a new threat model and bypass test.
 - Do not introduce plaintext secret storage or embed credentials in config, logs, plists, fixtures, or tests.
 - Do not describe behavioral exact-later approval as an enforcement boundary.
@@ -135,7 +135,7 @@ Add a test that demonstrates both the allowed case and the denied or recovered c
 
 When provider behavior changes, update the relevant file under `docs/` and keep the README summary consistent.
 
-For Codex product facts, link directly to current official OpenAI documentation at `developers.openai.com` or its official redirect target. Separate upstream behavior from Threadkeep policy. For example, state that OpenAI offers multiple authentication modes, then state that Threadkeep allows only ChatGPT login.
+For Codex product facts, link directly to current official OpenAI documentation at `developers.openai.com` or its official redirect target. Separate upstream behavior from Disco Party policy. For example, state that OpenAI offers multiple authentication modes, then state that Disco Party allows only ChatGPT login.
 
 Avoid promises that cannot be established by code or tests. Use `expected`, `experimental`, or `not yet verified` when that is the actual state.
 

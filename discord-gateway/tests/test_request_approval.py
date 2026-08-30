@@ -18,8 +18,8 @@ from unittest import mock
 HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parent.parent
 sys.path.insert(0, str(REPO_ROOT / "approval"))
-os.environ.setdefault("THREADKEEP_CONFIG", str(REPO_ROOT / "config.example.toml"))
-os.environ.setdefault("THREADKEEP_OWNER_USER_ID", "111111111111111111")
+os.environ.setdefault("DISCOPARTY_CONFIG", str(REPO_ROOT / "config.example.toml"))
+os.environ.setdefault("DISCOPARTY_OWNER_USER_ID", "111111111111111111")
 
 import request_approval as approval  # noqa: E402
 import request_approval_responder as responder  # noqa: E402

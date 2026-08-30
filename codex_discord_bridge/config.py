@@ -92,13 +92,13 @@ def _validated_state_dir(path: Path) -> Path:
             relative = requested.resolve(strict=False).relative_to(home)
         except ValueError as exc:
             raise RuntimeError("Codex state_dir must stay under canonical HOME") from exc
-    approved = ("Library", "Application Support", "Threadkeep")
+    approved = ("Library", "Application Support", "Discoparty")
     if (
         relative.parts[: len(approved)] != approved
         or len(relative.parts) <= len(approved)
     ):
         raise RuntimeError(
-            "Codex state_dir must stay under ~/Library/Application Support/Threadkeep"
+            "Codex state_dir must stay under ~/Library/Application Support/Discoparty"
         )
 
     current = home
@@ -120,7 +120,7 @@ def _validated_state_dir(path: Path) -> Path:
     approved_root = home.joinpath(*approved).resolve(strict=True)
     if canonical == approved_root or not canonical.is_relative_to(approved_root):
         raise RuntimeError(
-            "Codex state_dir must stay under ~/Library/Application Support/Threadkeep"
+            "Codex state_dir must stay under ~/Library/Application Support/Discoparty"
         )
     return canonical
 
@@ -130,8 +130,8 @@ class Config:
     """Validated runtime configuration for the Codex provider.
 
     The first five fields stay positional so protocol and ingress tests can
-    construct small fixtures. Production configuration comes from Threadkeep's
-    shared config loader through ``from_threadkeep``.
+    construct small fixtures. Production configuration comes from Disco Party's
+    shared config loader through ``from_discoparty``.
     """
 
     guild_id: str
@@ -140,15 +140,15 @@ class Config:
     bot_user_id: str
     application_id: str
     channel_trust: str = "public"
-    working_directory: Path = Path.home() / ".threadkeep"
-    state_dir: Path = Path.home() / "Library/Application Support/Threadkeep/codex-discord"
-    codex_home: Path = Path.home() / "Library/Application Support/Threadkeep/codex-discord/home/.codex"
+    working_directory: Path = Path.home() / ".discoparty"
+    state_dir: Path = Path.home() / "Library/Application Support/Discoparty/codex-discord"
+    codex_home: Path = Path.home() / "Library/Application Support/Discoparty/codex-discord/home/.codex"
     codex_bin: Path = Path("/opt/homebrew/bin/codex")
     sandbox_mode: str = "workspace-write"
     full_computer_access_accepted: bool = False
     instructions_file: Path | None = None
     shared_skills_root: Path = Path.home() / "TheSystem/x_System/Skills"
-    keychain_service: str = "threadkeep-secret"
+    keychain_service: str = "discoparty-secret"
     keychain_account: str = "discord-bot-token-codex"
     max_messages_per_minute: int = 5
     max_messages_per_hour: int = 30
@@ -336,13 +336,13 @@ class Config:
         return validate_hook_bridge(self.codex_home, sources).manifest_sha256
 
     @classmethod
-    def from_threadkeep(cls) -> "Config":
-        from conversations.config import CONFIG as threadkeep_config
+    def from_discoparty(cls) -> "Config":
+        from conversations.config import CONFIG as discoparty_config
         from conversations.config import REPO_ROOT, _config_path
 
-        source = threadkeep_config.codex
+        source = discoparty_config.codex
         if not source.enabled:
-            raise RuntimeError("the Codex orchestrator is disabled in Threadkeep config")
+            raise RuntimeError("the Codex orchestrator is disabled in Disco Party config")
         required_ids = {
             "guild_id": source.guild_id,
             "channel_id": source.channel_id,
@@ -354,8 +354,8 @@ class Config:
             if not value.isdecimal():
                 raise ValueError(f"codex.{name} must be an immutable numeric Discord ID")
         claude_channels = {
-            threadkeep_config.discord.chat_channel_id,
-            threadkeep_config.discord.errors_channel_id,
+            discoparty_config.discord.chat_channel_id,
+            discoparty_config.discord.errors_channel_id,
         }
         if source.channel_id in claude_channels:
             raise ValueError("Claude and Codex must use different Discord channels")
@@ -372,7 +372,7 @@ class Config:
             raise RuntimeError("configured Codex working_directory does not exist")
         instructions_file = source.instructions_file
         if source.sandbox_mode == "danger-full-access" and instructions_file is None:
-            instructions_file = threadkeep_config.paths.workspace_root / "CLAUDE.md"
+            instructions_file = discoparty_config.paths.workspace_root / "CLAUDE.md"
         if instructions_file is not None and not instructions_file.is_file():
             raise RuntimeError("configured Codex instructions_file does not exist")
         path_fields = {
@@ -390,7 +390,7 @@ class Config:
 
         workspace = source.working_directory.resolve()
         expected_shared_skills_root = (
-            threadkeep_config.paths.workspace_root / "x_System/Skills"
+            discoparty_config.paths.workspace_root / "x_System/Skills"
         ).resolve(strict=True)
         if source.shared_skills_root.resolve(strict=True) != expected_shared_skills_root:
             raise RuntimeError(
@@ -425,8 +425,8 @@ class Config:
                 "codex.codex_home must be the isolated state_dir/home/.codex path"
             )
         control_paths = {
-            "Threadkeep repository": REPO_ROOT.resolve(),
-            "Threadkeep config": _config_path().resolve(),
+            "Disco Party repository": REPO_ROOT.resolve(),
+            "Disco Party config": _config_path().resolve(),
             "Codex state directory": state_dir,
             "isolated Codex worker home": source.codex_home.parent.resolve(),
             "isolated CODEX_HOME": source.codex_home.resolve(),
@@ -446,7 +446,7 @@ class Config:
         if not source.keychain_service or not source.keychain_account:
             raise ValueError("Codex Keychain service and account must be non-empty")
         if (
-            source.keychain_service == "threadkeep-secret"
+            source.keychain_service == "discoparty-secret"
             and source.keychain_account == "discord-bot-token"
         ):
             raise ValueError("Codex must not use the Claude Discord Keychain account")
@@ -492,4 +492,4 @@ class Config:
     def from_env(cls) -> "Config":
         """Compatibility alias for the original deployment package."""
 
-        return cls.from_threadkeep()
+        return cls.from_discoparty()

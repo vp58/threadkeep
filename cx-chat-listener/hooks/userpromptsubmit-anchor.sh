@@ -8,7 +8,7 @@
 # CLAUDE.md and PreCompact mechanisms.
 #
 # Gated on cwd: only runs when the session cwd is the cx-chat-listener subdir
-# OF THE CONFIGURED THREADKEEP REPO. Other Claude Code sessions are unaffected.
+# OF THE CONFIGURED DISCOPARTY REPO. Other Claude Code sessions are unaffected.
 
 set -u
 
@@ -39,7 +39,7 @@ payload = {
     "hookSpecificOutput": {
         "hookEventName": "UserPromptSubmit",
         "additionalContext": (
-            "Remember: you are the Threadkeep cx-chat listener. Top-level "
+            "Remember: you are the Disco Party cx-chat listener. Top-level "
             "posts in the configured listen channel go through dispatch.py, "
             "never reply inline."
         ),

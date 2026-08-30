@@ -3,7 +3,7 @@
 import argparse, json, os
 from pathlib import Path
 
-LOG = Path(os.environ["THREADKEEP_TEST_CALLLOG"])
+LOG = Path(os.environ["DISCOPARTY_TEST_CALLLOG"])
 
 
 def main():

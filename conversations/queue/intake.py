@@ -16,7 +16,7 @@ eye reaction is idempotent on Discord's side, so even if BOTH the legacy path an
 intake run during a transition window, nothing double-acks or double-records.
 
 The Discord helper scripts (react.py) are resolved from the repo's approval/
-directory by default; override with THREADKEEP_DISCORD_SCRIPTS (used by tests to
+directory by default; override with DISCOPARTY_DISCORD_SCRIPTS (used by tests to
 inject fakes).
 """
 from __future__ import annotations
@@ -38,7 +38,7 @@ from public_output import contains_sensitive_data  # noqa: E402
 
 _REPO_ROOT = _HERE.parents[1]
 DISCORD_SCRIPTS = Path(
-    os.environ.get("THREADKEEP_DISCORD_SCRIPTS", str(_REPO_ROOT / "approval"))
+    os.environ.get("DISCOPARTY_DISCORD_SCRIPTS", str(_REPO_ROOT / "approval"))
 ).expanduser()
 REACT = DISCORD_SCRIPTS / "react.py"
 

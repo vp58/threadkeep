@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Install only Threadkeep's Codex Discord provider on the reviewed Apple M5 Max host.
+# Install only Disco Party's Codex Discord provider on the reviewed Apple M5 Max host.
 # The existing Claude installer and services are not changed by this script.
 
 set -euo pipefail
@@ -12,10 +12,10 @@ umask 077
 # first child process. Interactive installs read it silently from the TTY;
 # unattended installs require the dedicated Keychain entry to exist already.
 CODEX_DISCORD_TOKEN_ENV_WAS_SET=0
-if [ "${THREADKEEP_CODEX_DISCORD_BOT_TOKEN+x}" = "x" ]; then
+if [ "${DISCOPARTY_CODEX_DISCORD_BOT_TOKEN+x}" = "x" ]; then
   CODEX_DISCORD_TOKEN_ENV_WAS_SET=1
 fi
-unset THREADKEEP_CODEX_DISCORD_BOT_TOKEN || true
+unset DISCOPARTY_CODEX_DISCORD_BOT_TOKEN || true
 NEW_CODEX_TOKEN=""
 export -n NEW_CODEX_TOKEN 2>/dev/null || true
 OLD_KEYCHAIN_TOKEN=""
@@ -31,10 +31,10 @@ PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 export PATH
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LABEL="com.threadkeep.codex-discord-bridge"
+LABEL="com.discoparty.codex-discord-bridge"
 LEGACY_LABEL="com.thesystem.codex-discord-bridge"
-TMUX_SESSION="threadkeep-codex"
-KEYCHAIN_SERVICE="threadkeep-secret"
+TMUX_SESSION="discoparty-codex"
+KEYCHAIN_SERVICE="discoparty-secret"
 KEYCHAIN_ACCOUNT="discord-bot-token-codex"
 LEGACY_KEYCHAIN_SERVICE="thesystem-secret"
 LEGACY_KEYCHAIN_ACCOUNT="discord-bot-token-admin"
@@ -152,22 +152,22 @@ Options:
                       environment variables, generated files, or logs.
   --monitor           Start the optional read-only tmux monitor (default).
   --no-monitor        Do not start the optional tmux monitor.
-  --tmux-session NAME Override the monitor name (default: threadkeep-codex).
+  --tmux-session NAME Override the monitor name (default: discoparty-codex).
   --uninstall         Run uninstall.sh --codex and exit.
   -h, --help          Show this help.
 
 Required in --non-interactive mode:
-  THREADKEEP_CODEX_GUILD_ID
-  THREADKEEP_CODEX_CHANNEL_ID
-  THREADKEEP_CODEX_OWNER_USER_ID
-  THREADKEEP_CODEX_BOT_USER_ID
-  THREADKEEP_CODEX_APPLICATION_ID
-  THREADKEEP_CODEX_WORKING_DIRECTORY
-  THREADKEEP_CODEX_CHANNEL_TRUST      public (default) or owner_private
-  THREADKEEP_CODEX_SANDBOX_MODE       workspace-write or danger-full-access
+  DISCOPARTY_CODEX_GUILD_ID
+  DISCOPARTY_CODEX_CHANNEL_ID
+  DISCOPARTY_CODEX_OWNER_USER_ID
+  DISCOPARTY_CODEX_BOT_USER_ID
+  DISCOPARTY_CODEX_APPLICATION_ID
+  DISCOPARTY_CODEX_WORKING_DIRECTORY
+  DISCOPARTY_CODEX_CHANNEL_TRUST      public (default) or owner_private
+  DISCOPARTY_CODEX_SANDBOX_MODE       workspace-write or danger-full-access
 
 Full computer access:
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED
   danger-full-access requires this exact acceptance independently of channel
   trust. public and owner_private may each use either sandbox mode.
 
@@ -177,13 +177,13 @@ Destination trust:
   are the Discord guild owner and the dedicated bridge bot.
 
 Legacy takeover in --non-interactive mode:
-  THREADKEEP_CODEX_LEGACY_MAINTENANCE_ACCEPTED=LEGACY_MAINTENANCE_ACCEPTED
+  DISCOPARTY_CODEX_LEGACY_MAINTENANCE_ACCEPTED=LEGACY_MAINTENANCE_ACCEPTED
 
 Optional:
-  THREADKEEP_REPO_ROOT
-  THREADKEEP_CODEX_STATE_DIR
-  THREADKEEP_CODEX_BIN
-  THREADKEEP_CODEX_SHARED_SKILLS_ROOT
+  DISCOPARTY_REPO_ROOT
+  DISCOPARTY_CODEX_STATE_DIR
+  DISCOPARTY_CODEX_BIN
+  DISCOPARTY_CODEX_SHARED_SKILLS_ROOT
 EOF
 }
 
@@ -217,11 +217,11 @@ if [ "$TAKE_OVER_LEGACY" = "1" ] && [ "$REINSTALL" = "1" ]; then
 fi
 
 if [ "$SCRATCH" = "1" ]; then
-  SECURITY_BIN="${THREADKEEP_TEST_SECURITY_BIN:-$SECURITY_BIN}"
-  LAUNCHCTL_BIN="${THREADKEEP_TEST_LAUNCHCTL_BIN:-$LAUNCHCTL_BIN}"
-  PLUTIL_BIN="${THREADKEEP_TEST_PLUTIL_BIN:-$PLUTIL_BIN}"
-  UNAME_BIN="${THREADKEEP_TEST_UNAME_BIN:-$UNAME_BIN}"
-  SYSCTL_BIN="${THREADKEEP_TEST_SYSCTL_BIN:-$SYSCTL_BIN}"
+  SECURITY_BIN="${DISCOPARTY_TEST_SECURITY_BIN:-$SECURITY_BIN}"
+  LAUNCHCTL_BIN="${DISCOPARTY_TEST_LAUNCHCTL_BIN:-$LAUNCHCTL_BIN}"
+  PLUTIL_BIN="${DISCOPARTY_TEST_PLUTIL_BIN:-$PLUTIL_BIN}"
+  UNAME_BIN="${DISCOPARTY_TEST_UNAME_BIN:-$UNAME_BIN}"
+  SYSCTL_BIN="${DISCOPARTY_TEST_SYSCTL_BIN:-$SYSCTL_BIN}"
 fi
 
 cleanup_runtime_temp() {
@@ -326,7 +326,7 @@ rollback_and_cleanup() {
 
     if ! rollback_legacy_handoff_db; then
       rollback_safe=0
-      red "ERROR: The Threadkeep ledger contains work or could not be inspected; legacy rollback is unsafe."
+      red "ERROR: The Disco Party ledger contains work or could not be inspected; legacy rollback is unsafe."
     fi
 
     if [ "$PLIST_MUTATED" = "1" ] && [ -n "$PLIST_PATH" ]; then
@@ -351,12 +351,12 @@ rollback_and_cleanup() {
           :
         else
           rollback_safe=0
-          red "ERROR: Could not restore the prior Threadkeep config."
+          red "ERROR: Could not restore the prior Disco Party config."
         fi
       else
         if ! rm -f "$CONFIG_PATH"; then
           rollback_safe=0
-          red "ERROR: Could not remove the failed Threadkeep config."
+          red "ERROR: Could not remove the failed Disco Party config."
         fi
       fi
     fi
@@ -517,7 +517,7 @@ rollback_and_cleanup() {
   NEW_CODEX_TOKEN=""
   OLD_KEYCHAIN_TOKEN=""
   LEGACY_KEYCHAIN_TOKEN=""
-  unset THREADKEEP_CODEX_DISCORD_BOT_TOKEN OPENAI_API_KEY || true
+  unset DISCOPARTY_CODEX_DISCORD_BOT_TOKEN OPENAI_API_KEY || true
   exit "$status"
 }
 trap rollback_and_cleanup EXIT
@@ -568,7 +568,7 @@ check_no_api_key() {
     die "OPENAI_API_KEY must be unset. This provider only uses a ChatGPT subscription login."
   fi
   if [ "$CODEX_DISCORD_TOKEN_ENV_WAS_SET" = "1" ]; then
-    die "THREADKEEP_CODEX_DISCORD_BOT_TOKEN is forbidden. Pre-provision the dedicated Keychain entry or use the silent interactive prompt."
+    die "DISCOPARTY_CODEX_DISCORD_BOT_TOKEN is forbidden. Pre-provision the dedicated Keychain entry or use the silent interactive prompt."
   fi
 }
 
@@ -584,8 +584,8 @@ check_prerequisites() {
   [ "$chip" = "Apple M5 Max" ] || \
     die "This installer targets the reviewed Apple M5 Max host (found: ${chip:-unknown})."
 
-  if [ "$SCRATCH" = "1" ] && [ -n "${THREADKEEP_TEST_PYTHON_BIN:-}" ]; then
-    PYTHON_BIN="$THREADKEEP_TEST_PYTHON_BIN"
+  if [ "$SCRATCH" = "1" ] && [ -n "${DISCOPARTY_TEST_PYTHON_BIN:-}" ]; then
+    PYTHON_BIN="$DISCOPARTY_TEST_PYTHON_BIN"
   else
     command -v python3 >/dev/null 2>&1 || die "python3 is not on the sanitized PATH."
     PYTHON_BIN="$(command -v python3)"
@@ -598,7 +598,7 @@ check_prerequisites() {
   [ -x "$LAUNCHCTL_BIN" ] || die "The pinned launchctl command is unavailable."
   [ -x "$PLUTIL_BIN" ] || die "The pinned plutil command is unavailable."
 
-  CODEX_BIN="${THREADKEEP_CODEX_BIN:-$(command -v codex || true)}"
+  CODEX_BIN="${DISCOPARTY_CODEX_BIN:-$(command -v codex || true)}"
   [ -n "$CODEX_BIN" ] && [ -x "$CODEX_BIN" ] || \
     die "The official Codex CLI is not installed or executable."
   case "$CODEX_BIN" in
@@ -625,23 +625,23 @@ except FileNotFoundError:
     print("")
     raise SystemExit(0)
 except OSError as exc:
-    raise SystemExit("Could not inspect existing Threadkeep config") from exc
+    raise SystemExit("Could not inspect existing Disco Party config") from exc
 if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
-    raise SystemExit("Existing Threadkeep config must be a real regular file, not a symlink")
+    raise SystemExit("Existing Disco Party config must be a real regular file, not a symlink")
 if metadata.st_uid != os.getuid():
-    raise SystemExit("Existing Threadkeep config must be owned by the current user")
+    raise SystemExit("Existing Disco Party config must be owned by the current user")
 if stat.S_IMODE(metadata.st_mode) & 0o022:
-    raise SystemExit("Existing Threadkeep config must not be group/world writable")
+    raise SystemExit("Existing Disco Party config must not be group/world writable")
 if metadata.st_nlink != 1:
-    raise SystemExit("Existing Threadkeep config must have exactly one hard link")
+    raise SystemExit("Existing Disco Party config must have exactly one hard link")
 try:
     with path.open("rb") as stream:
         parsed = tomllib.load(stream)
 except (OSError, tomllib.TOMLDecodeError) as exc:
-    raise SystemExit("Existing Threadkeep config is not valid TOML") from exc
+    raise SystemExit("Existing Disco Party config is not valid TOML") from exc
 codex = parsed.get("codex", {})
 if not isinstance(codex, dict):
-    raise SystemExit("Existing Threadkeep [codex] config must be a table")
+    raise SystemExit("Existing Disco Party [codex] config must be a table")
 state_dir = codex.get("state_dir")
 if state_dir is None:
     print("")
@@ -656,46 +656,46 @@ PY
 }
 
 resolve_settings() {
-  REPO_ROOT="${THREADKEEP_REPO_ROOT:-$SCRIPT_DIR}"
+  REPO_ROOT="${DISCOPARTY_REPO_ROOT:-$SCRIPT_DIR}"
   if [ "$NON_INTERACTIVE" != "1" ]; then
-    prompt_optional REPO_ROOT "Threadkeep repo root" "$SCRIPT_DIR"
+    prompt_optional REPO_ROOT "Disco Party repo root" "$SCRIPT_DIR"
   fi
   REPO_ROOT="${REPO_ROOT/#\~/$HOME}"
-  [ -d "$REPO_ROOT" ] || die "Threadkeep repo root does not exist: $REPO_ROOT"
+  [ -d "$REPO_ROOT" ] || die "Disco Party repo root does not exist: $REPO_ROOT"
   REPO_ROOT="$(cd "$REPO_ROOT" && pwd -P)"
   [ -f "$REPO_ROOT/codex_discord_bridge/main.py" ] || \
     die "Codex bridge package is missing from $REPO_ROOT."
   CONFIG_PATH="$REPO_ROOT/config.toml"
 
-  prompt_required THREADKEEP_CODEX_GUILD_ID "Discord guild ID"
-  prompt_required THREADKEEP_CODEX_CHANNEL_ID "Discord channel ID"
-  prompt_required THREADKEEP_CODEX_OWNER_USER_ID "Discord owner user ID"
-  prompt_required THREADKEEP_CODEX_BOT_USER_ID "Dedicated Discord bot user ID"
-  prompt_required THREADKEEP_CODEX_APPLICATION_ID "Dedicated Discord application ID"
-  prompt_required THREADKEEP_CODEX_WORKING_DIRECTORY \
+  prompt_required DISCOPARTY_CODEX_GUILD_ID "Discord guild ID"
+  prompt_required DISCOPARTY_CODEX_CHANNEL_ID "Discord channel ID"
+  prompt_required DISCOPARTY_CODEX_OWNER_USER_ID "Discord owner user ID"
+  prompt_required DISCOPARTY_CODEX_BOT_USER_ID "Dedicated Discord bot user ID"
+  prompt_required DISCOPARTY_CODEX_APPLICATION_ID "Dedicated Discord application ID"
+  prompt_required DISCOPARTY_CODEX_WORKING_DIRECTORY \
     "Codex working directory" ""
-  THREADKEEP_CODEX_CHANNEL_TRUST="${THREADKEEP_CODEX_CHANNEL_TRUST:-public}"
-  prompt_optional THREADKEEP_CODEX_CHANNEL_TRUST \
+  DISCOPARTY_CODEX_CHANNEL_TRUST="${DISCOPARTY_CODEX_CHANNEL_TRUST:-public}"
+  prompt_optional DISCOPARTY_CODEX_CHANNEL_TRUST \
     "Discord channel trust (public or owner_private)" "public"
-  prompt_required THREADKEEP_CODEX_SANDBOX_MODE \
+  prompt_required DISCOPARTY_CODEX_SANDBOX_MODE \
     "Codex sandbox mode (workspace-write or danger-full-access)" "workspace-write"
 
-  validate_snowflake THREADKEEP_CODEX_GUILD_ID
-  validate_snowflake THREADKEEP_CODEX_CHANNEL_ID
-  validate_snowflake THREADKEEP_CODEX_OWNER_USER_ID
-  validate_snowflake THREADKEEP_CODEX_BOT_USER_ID
-  validate_snowflake THREADKEEP_CODEX_APPLICATION_ID
-  [ "$THREADKEEP_CODEX_OWNER_USER_ID" != "$THREADKEEP_CODEX_BOT_USER_ID" ] || \
+  validate_snowflake DISCOPARTY_CODEX_GUILD_ID
+  validate_snowflake DISCOPARTY_CODEX_CHANNEL_ID
+  validate_snowflake DISCOPARTY_CODEX_OWNER_USER_ID
+  validate_snowflake DISCOPARTY_CODEX_BOT_USER_ID
+  validate_snowflake DISCOPARTY_CODEX_APPLICATION_ID
+  [ "$DISCOPARTY_CODEX_OWNER_USER_ID" != "$DISCOPARTY_CODEX_BOT_USER_ID" ] || \
     die "The owner and Codex bot must be different Discord identities."
-  case "$THREADKEEP_CODEX_CHANNEL_TRUST" in
+  case "$DISCOPARTY_CODEX_CHANNEL_TRUST" in
     public|owner_private) ;;
-    *) die "THREADKEEP_CODEX_CHANNEL_TRUST must be public or owner_private." ;;
+    *) die "DISCOPARTY_CODEX_CHANNEL_TRUST must be public or owner_private." ;;
   esac
 
-  THREADKEEP_CODEX_WORKING_DIRECTORY="${THREADKEEP_CODEX_WORKING_DIRECTORY/#\~/$HOME}"
-  [ -d "$THREADKEEP_CODEX_WORKING_DIRECTORY" ] || \
-    die "Codex working directory does not exist: $THREADKEEP_CODEX_WORKING_DIRECTORY"
-  THREADKEEP_CODEX_WORKING_DIRECTORY="$(cd "$THREADKEEP_CODEX_WORKING_DIRECTORY" && pwd -P)"
+  DISCOPARTY_CODEX_WORKING_DIRECTORY="${DISCOPARTY_CODEX_WORKING_DIRECTORY/#\~/$HOME}"
+  [ -d "$DISCOPARTY_CODEX_WORKING_DIRECTORY" ] || \
+    die "Codex working directory does not exist: $DISCOPARTY_CODEX_WORKING_DIRECTORY"
+  DISCOPARTY_CODEX_WORKING_DIRECTORY="$(cd "$DISCOPARTY_CODEX_WORKING_DIRECTORY" && pwd -P)"
 
   local default_shared_skills_root="$HOME/TheSystem/x_System/Skills"
   if [ -f "$CONFIG_PATH" ]; then
@@ -721,13 +721,13 @@ else:
 PY
 )"
   fi
-  THREADKEEP_CODEX_SHARED_SKILLS_ROOT="${THREADKEEP_CODEX_SHARED_SKILLS_ROOT:-$default_shared_skills_root}"
-  prompt_optional THREADKEEP_CODEX_SHARED_SKILLS_ROOT \
+  DISCOPARTY_CODEX_SHARED_SKILLS_ROOT="${DISCOPARTY_CODEX_SHARED_SKILLS_ROOT:-$default_shared_skills_root}"
+  prompt_optional DISCOPARTY_CODEX_SHARED_SKILLS_ROOT \
     "Canonical shared Vault x_System/Skills directory" \
     "$default_shared_skills_root"
-  THREADKEEP_CODEX_SHARED_SKILLS_ROOT="${THREADKEEP_CODEX_SHARED_SKILLS_ROOT/#\~/$HOME}"
+  DISCOPARTY_CODEX_SHARED_SKILLS_ROOT="${DISCOPARTY_CODEX_SHARED_SKILLS_ROOT/#\~/$HOME}"
   SHARED_SKILLS_ROOT="$(PYTHONPATH="$REPO_ROOT" "$PYTHON_BIN" - \
-    "$THREADKEEP_CODEX_SHARED_SKILLS_ROOT" <<'PY'
+    "$DISCOPARTY_CODEX_SHARED_SKILLS_ROOT" <<'PY'
 import sys
 from pathlib import Path
 
@@ -737,26 +737,26 @@ print(bind_shared_skills(Path(sys.argv[1])).root)
 PY
 )"
 
-  case "$THREADKEEP_CODEX_SANDBOX_MODE" in
+  case "$DISCOPARTY_CODEX_SANDBOX_MODE" in
     workspace-write)
-      THREADKEEP_CODEX_FULL_ACCESS_BOOL="false"
+      DISCOPARTY_CODEX_FULL_ACCESS_BOOL="false"
       ;;
     danger-full-access)
-      [ "${THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED:-}" = \
+      [ "${DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED:-}" = \
         "FULL_COMPUTER_ACCESS_ACCEPTED" ] || \
-        die "danger-full-access requires THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED."
-      THREADKEEP_CODEX_FULL_ACCESS_BOOL="true"
+        die "danger-full-access requires DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED."
+      DISCOPARTY_CODEX_FULL_ACCESS_BOOL="true"
       ;;
-    *) die "THREADKEEP_CODEX_SANDBOX_MODE must be workspace-write or danger-full-access." ;;
+    *) die "DISCOPARTY_CODEX_SANDBOX_MODE must be workspace-write or danger-full-access." ;;
   esac
 
-  local default_state="$HOME/Library/Application Support/Threadkeep/codex-discord"
-  if [ -z "${THREADKEEP_CODEX_STATE_DIR:-}" ]; then
+  local default_state="$HOME/Library/Application Support/Discoparty/codex-discord"
+  if [ -z "${DISCOPARTY_CODEX_STATE_DIR:-}" ]; then
     local configured_state=""
     configured_state="$(existing_configured_state_dir)"
     [ -z "$configured_state" ] || default_state="$configured_state"
   fi
-  STATE_DIR="${THREADKEEP_CODEX_STATE_DIR:-$default_state}"
+  STATE_DIR="${DISCOPARTY_CODEX_STATE_DIR:-$default_state}"
   if [ "$NON_INTERACTIVE" != "1" ]; then
     prompt_optional STATE_DIR "Codex state directory" "$default_state"
   fi
@@ -768,7 +768,7 @@ PY
   # workspace temporary directory, runtime, logs, or a browser login flow.
   STATE_DIR="$(env -u PYTHONHOME -u PYTHONPATH -u PYTHONPYCACHEPREFIX -u PYTHONUSERBASE \
     PYTHONSAFEPATH=1 "$PYTHON_BIN" - \
-    "$HOME" "$REPO_ROOT" "$THREADKEEP_CODEX_WORKING_DIRECTORY" \
+    "$HOME" "$REPO_ROOT" "$DISCOPARTY_CODEX_WORKING_DIRECTORY" \
     "$SHARED_SKILLS_ROOT" "$STATE_DIR" "$CONFIG_PATH" "$LOG_DIR" "$PLIST_PATH" <<'PY'
 import os
 import stat
@@ -803,13 +803,13 @@ except ValueError:
         relative_state = raw_state.resolve(strict=False).relative_to(home)
     except ValueError as exc:
         raise SystemExit("Codex state_dir must stay under the current user's home") from exc
-approved_relative = ("Library", "Application Support", "Threadkeep")
+approved_relative = ("Library", "Application Support", "Discoparty")
 if (
     relative_state.parts[: len(approved_relative)] != approved_relative
     or len(relative_state.parts) <= len(approved_relative)
 ):
     raise SystemExit(
-        "Codex state_dir must stay under canonical ~/Library/Application Support/Threadkeep"
+        "Codex state_dir must stay under canonical ~/Library/Application Support/Discoparty"
     )
 
 state_candidate = home.joinpath(*relative_state.parts)
@@ -864,11 +864,11 @@ def overlaps(first: Path, second: Path) -> bool:
     )
 
 if overlaps(state, repo):
-    raise SystemExit("Codex state_dir must not overlap the Threadkeep repository")
+    raise SystemExit("Codex state_dir must not overlap the Disco Party repository")
 if overlaps(state, workspace):
     raise SystemExit("Codex state_dir must not overlap the Codex working_directory")
 if overlaps(workspace, repo):
-    raise SystemExit("Codex working_directory must not overlap the Threadkeep repository")
+    raise SystemExit("Codex working_directory must not overlap the Disco Party repository")
 
 def inspect_control_path(path: Path, label: str, directory: bool) -> None:
     try:
@@ -888,7 +888,7 @@ def inspect_control_path(path: Path, label: str, directory: bool) -> None:
     if not directory and metadata.st_nlink != 1:
         raise SystemExit(f"Existing {label} must have exactly one hard link")
 
-inspect_control_path(config, "Threadkeep config", directory=False)
+inspect_control_path(config, "Disco Party config", directory=False)
 inspect_control_path(logs, "Codex logs directory", directory=True)
 inspect_control_path(plist, "Codex LaunchAgent plist", directory=False)
 inspect_control_path(
@@ -903,7 +903,7 @@ inspect_control_path(
 )
 
 control_paths = {
-    "Threadkeep config": config.resolve(strict=False),
+    "Disco Party config": config.resolve(strict=False),
     "Codex LaunchAgent plist": plist.resolve(strict=False),
     "Codex logs directory": logs.resolve(strict=False),
     "canonical shared Vault skill root": shared_skills,
@@ -913,10 +913,10 @@ if config.exists():
         with config.open("rb") as stream:
             parsed = tomllib.load(stream)
     except (OSError, tomllib.TOMLDecodeError) as exc:
-        raise SystemExit("Existing Threadkeep config is not valid TOML") from exc
+        raise SystemExit("Existing Disco Party config is not valid TOML") from exc
     codex = parsed.get("codex", {})
     if not isinstance(codex, dict):
-        raise SystemExit("Existing Threadkeep [codex] config must be a table")
+        raise SystemExit("Existing Disco Party [codex] config must be a table")
     instructions = codex.get("instructions_file")
     if instructions is not None:
         if not isinstance(instructions, str) or not instructions:
@@ -955,7 +955,7 @@ PY
   fi
   WORKER_HOME="$STATE_DIR/home"
   CODEX_HOME_DIR="$WORKER_HOME/.codex"
-  RUNTIME_TMP="$THREADKEEP_CODEX_WORKING_DIRECTORY/.threadkeep-tmp"
+  RUNTIME_TMP="$DISCOPARTY_CODEX_WORKING_DIRECTORY/.discoparty-tmp"
   RUNTIME_VENV=""
   if [ "$SCRATCH" = "1" ]; then
     NATIVE_CODEX_BIN="$CODEX_BIN"
@@ -1012,10 +1012,10 @@ validate_legacy_plist() {
   env -u PYTHONHOME -u PYTHONPATH -u PYTHONPYCACHEPREFIX -u PYTHONUSERBASE \
     PYTHONSAFEPATH=1 "$PYTHON_BIN" - \
     "$LEGACY_PLIST_PATH" "$LEGACY_REPO_ROOT" "$HOME" \
-    "$THREADKEEP_CODEX_GUILD_ID" "$THREADKEEP_CODEX_CHANNEL_ID" \
-    "$THREADKEEP_CODEX_OWNER_USER_ID" "$THREADKEEP_CODEX_BOT_USER_ID" \
-    "$THREADKEEP_CODEX_APPLICATION_ID" "$THREADKEEP_CODEX_WORKING_DIRECTORY" \
-    "${THREADKEEP_CODEX_CHANNEL_TRUST:-public}" <<'PY'
+    "$DISCOPARTY_CODEX_GUILD_ID" "$DISCOPARTY_CODEX_CHANNEL_ID" \
+    "$DISCOPARTY_CODEX_OWNER_USER_ID" "$DISCOPARTY_CODEX_BOT_USER_ID" \
+    "$DISCOPARTY_CODEX_APPLICATION_ID" "$DISCOPARTY_CODEX_WORKING_DIRECTORY" \
+    "${DISCOPARTY_CODEX_CHANNEL_TRUST:-public}" <<'PY'
 import os
 import plistlib
 import stat
@@ -1130,8 +1130,8 @@ validate_legacy_state() {
   LEGACY_ROOT_CURSOR="$(env -u PYTHONHOME -u PYTHONPATH -u PYTHONPYCACHEPREFIX -u PYTHONUSERBASE \
     PYTHONSAFEPATH=1 "$PYTHON_BIN" - \
     "$LEGACY_STATE_DIR" "$LEGACY_DATABASE_PATH" \
-    "$THREADKEEP_CODEX_GUILD_ID" "$THREADKEEP_CODEX_CHANNEL_ID" \
-    "$THREADKEEP_CODEX_OWNER_USER_ID" "$require_quiescent" <<'PY'
+    "$DISCOPARTY_CODEX_GUILD_ID" "$DISCOPARTY_CODEX_CHANNEL_ID" \
+    "$DISCOPARTY_CODEX_OWNER_USER_ID" "$require_quiescent" <<'PY'
 import os
 import sqlite3
 import stat
@@ -1299,7 +1299,7 @@ if (
     payload.get("version") != 1
     or payload.get("state") != "new_ready"
     or payload.get("legacy_label") != "com.thesystem.codex-discord-bridge"
-    or payload.get("replacement_label") != "com.threadkeep.codex-discord-bridge"
+    or payload.get("replacement_label") != "com.discoparty.codex-discord-bridge"
     or payload.get("root_cursor") != cursor
 ):
     raise SystemExit("completed legacy takeover marker does not match the legacy ledger")
@@ -1382,10 +1382,10 @@ detect_and_validate_legacy() {
   fi
   if [ "$replacement_present" = "1" ]; then
     [ "$loaded" = "0" ] || \
-      die "Both legacy and Threadkeep Codex providers are loaded or installed. Refusing an ambiguous takeover."
+      die "Both legacy and Disco Party Codex providers are loaded or installed. Refusing an ambiguous takeover."
     legacy_label_disabled || \
-      die "The retained legacy label is not disabled; refusing to operate the Threadkeep provider beside it."
-    die "Both legacy and Threadkeep Codex provider footprints exist without a valid completed-takeover record."
+      die "The retained legacy label is not disabled; refusing to operate the Disco Party provider beside it."
+    die "Both legacy and Disco Party Codex provider footprints exist without a valid completed-takeover record."
   fi
   [ "$TAKE_OVER_LEGACY" = "1" ] || \
     die "Legacy $LEGACY_LABEL is installed or loaded. Refusing a dual-run; validate it and re-run with --take-over-legacy."
@@ -1563,7 +1563,7 @@ for distribution in importlib.metadata.distributions():
 if "pip" not in seen or "websockets" not in seen:
     raise SystemExit("runtime is missing a required distribution")
 
-manifest = root / "threadkeep-runtime.json"
+manifest = root / "discoparty-runtime.json"
 manifest_metadata = manifest.lstat()
 if (
     manifest.is_symlink()
@@ -1688,7 +1688,7 @@ record = {
     "requirements_sha256": sys.argv[4],
     "websockets": sys.argv[3],
 }
-target = root / "threadkeep-runtime.json"
+target = root / "discoparty-runtime.json"
 payload = (json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n").encode()
 flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
 if hasattr(os, "O_NOFOLLOW"):
@@ -1754,7 +1754,7 @@ prepare_isolated_codex() {
   require_topology_validated
   blue "Creating the isolated Codex home and reviewed policy."
   PYTHONPATH="$REPO_ROOT" "$PYTHON_BIN" - \
-    "$CODEX_HOME_DIR" "$THREADKEEP_CODEX_WORKING_DIRECTORY" <<'PY'
+    "$CODEX_HOME_DIR" "$DISCOPARTY_CODEX_WORKING_DIRECTORY" <<'PY'
 import sys
 from pathlib import Path
 
@@ -1771,16 +1771,16 @@ PY
   fi
   if [ -f "$CODEX_HOME_DIR/config.toml" ]; then
     CODEX_CONFIG_EXISTED=1
-    CODEX_CONFIG_BACKUP="$(mktemp "${TMPDIR:-/tmp}/threadkeep-codex-home-config.XXXXXX")"
+    CODEX_CONFIG_BACKUP="$(mktemp "${TMPDIR:-/tmp}/discoparty-codex-home-config.XXXXXX")"
     cp -p "$CODEX_HOME_DIR/config.toml" "$CODEX_CONFIG_BACKUP"
   elif [ -e "$CODEX_HOME_DIR/config.toml" ]; then
     die "Isolated Codex config path is not a regular file."
   fi
   CODEX_CONFIG_MUTATED=1
   local safe_mode="false"
-  [ "$THREADKEEP_CODEX_SANDBOX_MODE" = "workspace-write" ] && safe_mode="true"
+  [ "$DISCOPARTY_CODEX_SANDBOX_MODE" = "workspace-write" ] && safe_mode="true"
   PYTHONPATH="$REPO_ROOT" "$PYTHON_BIN" - \
-    "$CODEX_HOME_DIR" "$THREADKEEP_CODEX_WORKING_DIRECTORY" "$safe_mode" <<'PY'
+    "$CODEX_HOME_DIR" "$DISCOPARTY_CODEX_WORKING_DIRECTORY" "$safe_mode" <<'PY'
 import sys
 from pathlib import Path
 
@@ -1797,7 +1797,7 @@ PY
   fi
   if [ -f "$CODEX_HOME_DIR/hooks.json" ]; then
     CODEX_HOOKS_EXISTED=1
-    CODEX_HOOKS_BACKUP="$(mktemp "${TMPDIR:-/tmp}/threadkeep-codex-home-hooks.XXXXXX")"
+    CODEX_HOOKS_BACKUP="$(mktemp "${TMPDIR:-/tmp}/discoparty-codex-home-hooks.XXXXXX")"
     cp -p "$CODEX_HOME_DIR/hooks.json" "$CODEX_HOOKS_BACKUP"
   elif [ -e "$CODEX_HOME_DIR/hooks.json" ]; then
     die "Isolated Codex hooks path is not a regular file."
@@ -1805,7 +1805,7 @@ PY
   CODEX_HOOKS_MUTATED=1
   PYTHONPATH="$REPO_ROOT" "$PYTHON_BIN" - \
     "$CODEX_HOME_DIR" "$SHARED_SKILLS_ROOT" \
-    "$THREADKEEP_CODEX_WORKING_DIRECTORY" <<'PY'
+    "$DISCOPARTY_CODEX_WORKING_DIRECTORY" <<'PY'
 import sys
 from pathlib import Path
 
@@ -1854,7 +1854,7 @@ prepare_vault_policy_seal() {
   require_topology_validated
   blue "Sealing the canonical Vault P0 policy for both orchestrators."
   PYTHONPATH="$REPO_ROOT" "$PYTHON_BIN" - \
-    "$SHARED_SKILLS_ROOT" "$STATE_DIR" "$THREADKEEP_CODEX_WORKING_DIRECTORY" <<'PY'
+    "$SHARED_SKILLS_ROOT" "$STATE_DIR" "$DISCOPARTY_CODEX_WORKING_DIRECTORY" <<'PY'
 import sys
 from pathlib import Path
 
@@ -2035,7 +2035,7 @@ store_bot_token() {
 
   # Preflight must prove that the bridge can read Keychain. It must not take
   # the token from the installer environment.
-  unset THREADKEEP_CODEX_DISCORD_BOT_TOKEN || true
+  unset DISCOPARTY_CODEX_DISCORD_BOT_TOKEN || true
 }
 
 backup_config() {
@@ -2065,11 +2065,11 @@ if (
     or metadata.st_nlink != 1
 ):
     raise SystemExit(
-        "existing Threadkeep config must be current-user-owned, single-link, regular, and not group/world writable"
+        "existing Disco Party config must be current-user-owned, single-link, regular, and not group/world writable"
     )
 PY
     CONFIG_EXISTED=1
-    CONFIG_BACKUP="$(mktemp "${TMPDIR:-/tmp}/threadkeep-codex-config.XXXXXX")"
+    CONFIG_BACKUP="$(mktemp "${TMPDIR:-/tmp}/discoparty-codex-config.XXXXXX")"
     cp -p "$CONFIG_PATH" "$CONFIG_BACKUP"
   else
     cp "$REPO_ROOT/config.example.toml" "$CONFIG_PATH"
@@ -2082,19 +2082,19 @@ update_codex_config() {
   backup_config
   CONFIG_MUTATED=1
 
-  THREADKEEP_INSTALL_GUILD_ID="$THREADKEEP_CODEX_GUILD_ID" \
-  THREADKEEP_INSTALL_CHANNEL_ID="$THREADKEEP_CODEX_CHANNEL_ID" \
-  THREADKEEP_INSTALL_OWNER_ID="$THREADKEEP_CODEX_OWNER_USER_ID" \
-  THREADKEEP_INSTALL_BOT_ID="$THREADKEEP_CODEX_BOT_USER_ID" \
-  THREADKEEP_INSTALL_APPLICATION_ID="$THREADKEEP_CODEX_APPLICATION_ID" \
-  THREADKEEP_INSTALL_CHANNEL_TRUST="$THREADKEEP_CODEX_CHANNEL_TRUST" \
-  THREADKEEP_INSTALL_WORKING_DIRECTORY="$THREADKEEP_CODEX_WORKING_DIRECTORY" \
-  THREADKEEP_INSTALL_STATE_DIR="$STATE_DIR" \
-  THREADKEEP_INSTALL_CODEX_HOME="$CODEX_HOME_DIR" \
-  THREADKEEP_INSTALL_CODEX_BIN="$CODEX_BIN" \
-  THREADKEEP_INSTALL_SANDBOX_MODE="$THREADKEEP_CODEX_SANDBOX_MODE" \
-  THREADKEEP_INSTALL_FULL_ACCESS="$THREADKEEP_CODEX_FULL_ACCESS_BOOL" \
-  THREADKEEP_INSTALL_SHARED_SKILLS_ROOT="$SHARED_SKILLS_ROOT" \
+  DISCOPARTY_INSTALL_GUILD_ID="$DISCOPARTY_CODEX_GUILD_ID" \
+  DISCOPARTY_INSTALL_CHANNEL_ID="$DISCOPARTY_CODEX_CHANNEL_ID" \
+  DISCOPARTY_INSTALL_OWNER_ID="$DISCOPARTY_CODEX_OWNER_USER_ID" \
+  DISCOPARTY_INSTALL_BOT_ID="$DISCOPARTY_CODEX_BOT_USER_ID" \
+  DISCOPARTY_INSTALL_APPLICATION_ID="$DISCOPARTY_CODEX_APPLICATION_ID" \
+  DISCOPARTY_INSTALL_CHANNEL_TRUST="$DISCOPARTY_CODEX_CHANNEL_TRUST" \
+  DISCOPARTY_INSTALL_WORKING_DIRECTORY="$DISCOPARTY_CODEX_WORKING_DIRECTORY" \
+  DISCOPARTY_INSTALL_STATE_DIR="$STATE_DIR" \
+  DISCOPARTY_INSTALL_CODEX_HOME="$CODEX_HOME_DIR" \
+  DISCOPARTY_INSTALL_CODEX_BIN="$CODEX_BIN" \
+  DISCOPARTY_INSTALL_SANDBOX_MODE="$DISCOPARTY_CODEX_SANDBOX_MODE" \
+  DISCOPARTY_INSTALL_FULL_ACCESS="$DISCOPARTY_CODEX_FULL_ACCESS_BOOL" \
+  DISCOPARTY_INSTALL_SHARED_SKILLS_ROOT="$SHARED_SKILLS_ROOT" \
   "$PYTHON_BIN" - "$CONFIG_PATH" <<'PY'
 import json
 import os
@@ -2127,20 +2127,20 @@ def q(name: str) -> str:
 block_lines = [
         "[codex]",
         "enabled = true",
-        f"guild_id = {q('THREADKEEP_INSTALL_GUILD_ID')}",
-        f"channel_id = {q('THREADKEEP_INSTALL_CHANNEL_ID')}",
-        f"owner_user_id = {q('THREADKEEP_INSTALL_OWNER_ID')}",
-        f"bot_user_id = {q('THREADKEEP_INSTALL_BOT_ID')}",
-        f"application_id = {q('THREADKEEP_INSTALL_APPLICATION_ID')}",
-        f"channel_trust = {q('THREADKEEP_INSTALL_CHANNEL_TRUST')}",
-        f"working_directory = {q('THREADKEEP_INSTALL_WORKING_DIRECTORY')}",
-        f"state_dir = {q('THREADKEEP_INSTALL_STATE_DIR')}",
-        f"codex_home = {q('THREADKEEP_INSTALL_CODEX_HOME')}",
-        f"codex_bin = {q('THREADKEEP_INSTALL_CODEX_BIN')}",
-        f"sandbox_mode = {q('THREADKEEP_INSTALL_SANDBOX_MODE')}",
-        f"full_computer_access_accepted = {os.environ['THREADKEEP_INSTALL_FULL_ACCESS']}",
-        f"shared_skills_root = {q('THREADKEEP_INSTALL_SHARED_SKILLS_ROOT')}",
-        'keychain_service = "threadkeep-secret"',
+        f"guild_id = {q('DISCOPARTY_INSTALL_GUILD_ID')}",
+        f"channel_id = {q('DISCOPARTY_INSTALL_CHANNEL_ID')}",
+        f"owner_user_id = {q('DISCOPARTY_INSTALL_OWNER_ID')}",
+        f"bot_user_id = {q('DISCOPARTY_INSTALL_BOT_ID')}",
+        f"application_id = {q('DISCOPARTY_INSTALL_APPLICATION_ID')}",
+        f"channel_trust = {q('DISCOPARTY_INSTALL_CHANNEL_TRUST')}",
+        f"working_directory = {q('DISCOPARTY_INSTALL_WORKING_DIRECTORY')}",
+        f"state_dir = {q('DISCOPARTY_INSTALL_STATE_DIR')}",
+        f"codex_home = {q('DISCOPARTY_INSTALL_CODEX_HOME')}",
+        f"codex_bin = {q('DISCOPARTY_INSTALL_CODEX_BIN')}",
+        f"sandbox_mode = {q('DISCOPARTY_INSTALL_SANDBOX_MODE')}",
+        f"full_computer_access_accepted = {os.environ['DISCOPARTY_INSTALL_FULL_ACCESS']}",
+        f"shared_skills_root = {q('DISCOPARTY_INSTALL_SHARED_SKILLS_ROOT')}",
+        'keychain_service = "discoparty-secret"',
         'keychain_account = "discord-bot-token-codex"',
 ]
 
@@ -2196,7 +2196,7 @@ os.chmod(temp_path, mode)
 os.replace(temp_path, path)
 PY
 
-  THREADKEEP_CONFIG="$CONFIG_PATH" PYTHONPATH="$REPO_ROOT" \
+  DISCOPARTY_CONFIG="$CONFIG_PATH" PYTHONPATH="$REPO_ROOT" \
     "$PYTHON_BIN" -c 'import tomllib, sys; tomllib.load(open(sys.argv[1], "rb"))' "$CONFIG_PATH"
   green "  Updated only the [codex] provider table in $CONFIG_PATH."
 }
@@ -2207,11 +2207,11 @@ run_preflight() {
   # The config now contains the validated true/false value, so do not let the
   # confirmation environment variable override it in conversations.config.
   env -u OPENAI_API_KEY -u CODEX_HOME \
-    -u THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED \
+    -u DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED \
     HOME="$HOME" \
     PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
     PYTHONPATH="$REPO_ROOT" \
-    THREADKEEP_CONFIG="$CONFIG_PATH" \
+    DISCOPARTY_CONFIG="$CONFIG_PATH" \
     "$PYTHON_BIN" -m codex_discord_bridge.preflight
   green "  Codex subscription, CLI protocol, Discord identity, and channel checks passed."
 }
@@ -2226,7 +2226,7 @@ backup_plist() {
   fi
   if [ -f "$PLIST_PATH" ]; then
     PLIST_EXISTED=1
-    PLIST_BACKUP="$(mktemp "${TMPDIR:-/tmp}/threadkeep-codex-plist.XXXXXX")"
+    PLIST_BACKUP="$(mktemp "${TMPDIR:-/tmp}/discoparty-codex-plist.XXXXXX")"
     cp -p "$PLIST_PATH" "$PLIST_BACKUP"
   fi
   PLIST_SNAPSHOTTED=1
@@ -2262,17 +2262,17 @@ quiesce_existing_agent() {
 render_plist() {
   validate_log_targets
   blue "Rendering the dedicated Codex LaunchAgent."
-  local template="$REPO_ROOT/launchd/templates/com.threadkeep.codex-discord-bridge.plist.template"
+  local template="$REPO_ROOT/launchd/templates/com.discoparty.codex-discord-bridge.plist.template"
   [ -r "$template" ] || die "LaunchAgent template not found: $template"
   backup_plist
   PLIST_MUTATED=1
 
-  THREADKEEP_INSTALL_LABEL="$LABEL" \
-  THREADKEEP_INSTALL_REPO_ROOT="$REPO_ROOT" \
-  THREADKEEP_INSTALL_HOME="$HOME" \
-  THREADKEEP_INSTALL_PYTHON_BIN="$PYTHON_BIN" \
-  THREADKEEP_INSTALL_CONFIG_PATH="$CONFIG_PATH" \
-  THREADKEEP_INSTALL_LOG_DIR="$LOG_DIR" \
+  DISCOPARTY_INSTALL_LABEL="$LABEL" \
+  DISCOPARTY_INSTALL_REPO_ROOT="$REPO_ROOT" \
+  DISCOPARTY_INSTALL_HOME="$HOME" \
+  DISCOPARTY_INSTALL_PYTHON_BIN="$PYTHON_BIN" \
+  DISCOPARTY_INSTALL_CONFIG_PATH="$CONFIG_PATH" \
+  DISCOPARTY_INSTALL_LOG_DIR="$LOG_DIR" \
   "$PYTHON_BIN" - "$template" "$PLIST_PATH" <<'PY'
 import os
 import re
@@ -2285,12 +2285,12 @@ template = Path(sys.argv[1])
 target = Path(sys.argv[2])
 data = template.read_text()
 replacements = {
-    "__LABEL__": os.environ["THREADKEEP_INSTALL_LABEL"],
-    "__REPO_ROOT__": os.environ["THREADKEEP_INSTALL_REPO_ROOT"],
-    "__HOME__": os.environ["THREADKEEP_INSTALL_HOME"],
-    "__PYTHON_BIN__": os.environ["THREADKEEP_INSTALL_PYTHON_BIN"],
-    "__CONFIG_PATH__": os.environ["THREADKEEP_INSTALL_CONFIG_PATH"],
-    "__LOG_DIR__": os.environ["THREADKEEP_INSTALL_LOG_DIR"],
+    "__LABEL__": os.environ["DISCOPARTY_INSTALL_LABEL"],
+    "__REPO_ROOT__": os.environ["DISCOPARTY_INSTALL_REPO_ROOT"],
+    "__HOME__": os.environ["DISCOPARTY_INSTALL_HOME"],
+    "__PYTHON_BIN__": os.environ["DISCOPARTY_INSTALL_PYTHON_BIN"],
+    "__CONFIG_PATH__": os.environ["DISCOPARTY_INSTALL_CONFIG_PATH"],
+    "__LOG_DIR__": os.environ["DISCOPARTY_INSTALL_LOG_DIR"],
 }
 for placeholder, value in replacements.items():
     data = data.replace(placeholder, escape(value))
@@ -2397,7 +2397,7 @@ payload = {
     "version": 1,
     "state": state,
     "legacy_label": "com.thesystem.codex-discord-bridge",
-    "replacement_label": "com.threadkeep.codex-discord-bridge",
+    "replacement_label": "com.discoparty.codex-discord-bridge",
     "root_cursor": sys.argv[3],
     "backup_dir": sys.argv[4] or None,
     "legacy_was_loaded": sys.argv[5] == "1",
@@ -2426,7 +2426,7 @@ PY
 accept_legacy_maintenance_window() {
   [ "$LEGACY_VALIDATED" = "1" ] || \
     die "Legacy maintenance requires an exact validated legacy deployment."
-  local acceptance="${THREADKEEP_CODEX_LEGACY_MAINTENANCE_ACCEPTED:-}"
+  local acceptance="${DISCOPARTY_CODEX_LEGACY_MAINTENANCE_ACCEPTED:-}"
   if [ "$NON_INTERACTIVE" != "1" ]; then
     say
     yellow "Stop posting in the Codex Discord channel or any of its existing threads. The legacy Gateway will now be stopped."
@@ -2435,7 +2435,7 @@ accept_legacy_maintenance_window() {
   fi
   [ "$acceptance" = "LEGACY_MAINTENANCE_ACCEPTED" ] || \
     die "Legacy takeover requires the exact phrase LEGACY_MAINTENANCE_ACCEPTED."
-  unset THREADKEEP_CODEX_LEGACY_MAINTENANCE_ACCEPTED || true
+  unset DISCOPARTY_CODEX_LEGACY_MAINTENANCE_ACCEPTED || true
   write_legacy_handoff_state "maintenance_accepted"
 }
 
@@ -2506,7 +2506,7 @@ quiesce_legacy_agent() {
   if [ "$LEGACY_PRIOR_LOADED" = "1" ]; then
     if ! "$LAUNCHCTL_BIN" bootout "gui/$UID/$LEGACY_LABEL" >/dev/null 2>&1; then
       if legacy_label_loaded; then
-        die "Could not stop legacy $LEGACY_LABEL; Threadkeep was not bootstrapped."
+        die "Could not stop legacy $LEGACY_LABEL; Disco Party was not bootstrapped."
       fi
     fi
   fi
@@ -2648,14 +2648,14 @@ PY
 
 current_policy_binding() {
   env -u OPENAI_API_KEY -u CODEX_HOME \
-    -u THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED \
-    HOME="$HOME" PYTHONPATH="$REPO_ROOT" THREADKEEP_CONFIG="$CONFIG_PATH" \
+    -u DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED \
+    HOME="$HOME" PYTHONPATH="$REPO_ROOT" DISCOPARTY_CONFIG="$CONFIG_PATH" \
     "$PYTHON_BIN" - <<'PY'
 from codex_discord_bridge.config import Config
 from codex_discord_bridge.main import probe_account_binding
 import asyncio
 
-config = Config.from_threadkeep()
+config = Config.from_discoparty()
 instructions = config.instructions_digest()
 shared_skills = config.shared_skills_digest()
 shared_hooks = config.shared_hooks_digest()
@@ -2682,7 +2682,7 @@ reconcile_legacy_root_cursor() {
     die "Root cursor handoff requires a completed private legacy backup."
   local database="$STATE_DIR/jobs.sqlite3"
   if [ -e "$database" ] || [ -e "$database-wal" ] || [ -e "$database-shm" ]; then
-    die "Legacy takeover requires an empty Threadkeep job ledger; refusing to merge histories implicitly."
+    die "Legacy takeover requires an empty Disco Party job ledger; refusing to merge histories implicitly."
   fi
   local binding=""
   binding="$(current_policy_binding)"
@@ -2690,7 +2690,7 @@ reconcile_legacy_root_cursor() {
   LEGACY_HANDOFF_DB_CREATED=1
   env -u PYTHONHOME -u PYTHONPATH -u PYTHONPYCACHEPREFIX -u PYTHONUSERBASE \
     PYTHONSAFEPATH=1 PYTHONPATH="$REPO_ROOT" "$PYTHON_BIN" - \
-    "$database" "$binding" "$THREADKEEP_CODEX_CHANNEL_ID" "$LEGACY_ROOT_CURSOR" <<'PY'
+    "$database" "$binding" "$DISCOPARTY_CODEX_CHANNEL_ID" "$LEGACY_ROOT_CURSOR" <<'PY'
 import sys
 from pathlib import Path
 
@@ -2701,10 +2701,10 @@ binding, channel_id, cursor = sys.argv[2:]
 store = JobStore(path, policy_binding=binding)
 store.save_cursor(channel_id, cursor)
 if store.cursor_for(channel_id) != cursor:
-    raise SystemExit("Threadkeep root cursor handoff did not persist")
+    raise SystemExit("Disco Party root cursor handoff did not persist")
 with store.connect() as db:
     if int(db.execute("SELECT COUNT(*) FROM jobs").fetchone()[0]) != 0:
-        raise SystemExit("Threadkeep takeover ledger unexpectedly contains jobs")
+        raise SystemExit("Disco Party takeover ledger unexpectedly contains jobs")
 PY
   write_legacy_handoff_state "cursor_reconciled"
   green "  Root cursor reconciled into the current policy scope."
@@ -2718,7 +2718,7 @@ verify_legacy_cursor_handoff() {
   env -u PYTHONHOME -u PYTHONPATH -u PYTHONPYCACHEPREFIX -u PYTHONUSERBASE \
     PYTHONSAFEPATH=1 PYTHONPATH="$REPO_ROOT" "$PYTHON_BIN" - \
     "$STATE_DIR/jobs.sqlite3" "$LEGACY_HANDOFF_MARKER" "$binding" \
-    "$THREADKEEP_CODEX_CHANNEL_ID" "$LEGACY_ROOT_CURSOR" "$LEGACY_BACKUP_DIR" <<'PY'
+    "$DISCOPARTY_CODEX_CHANNEL_ID" "$LEGACY_ROOT_CURSOR" "$LEGACY_BACKUP_DIR" <<'PY'
 import json
 import os
 import sqlite3
@@ -2767,10 +2767,10 @@ perform_legacy_handoff() {
     if [ "$PLIST_MUTATED" = "1" ]; then
       if [ "$PLIST_EXISTED" = "1" ]; then
         [ -n "$PLIST_BACKUP" ] && cp -p "$PLIST_BACKUP" "$PLIST_PATH" || \
-          die "Could not restore the pre-scratch Threadkeep plist."
+          die "Could not restore the pre-scratch Disco Party plist."
       else
         rm -f "$PLIST_PATH" || \
-          die "Could not remove the validated scratch Threadkeep plist."
+          die "Could not remove the validated scratch Disco Party plist."
       fi
       PLIST_MUTATED=0
     fi
@@ -2901,7 +2901,7 @@ start_monitor() {
 }
 
 main() {
-  say "Threadkeep Codex provider installer"
+  say "Disco Party Codex provider installer"
   say "LaunchAgent: $LABEL"
   say
 
@@ -2935,12 +2935,12 @@ main() {
   say
   say "Codex provider:"
   say "  Config:           $CONFIG_PATH ([codex] only)"
-  say "  Working dir:      $THREADKEEP_CODEX_WORKING_DIRECTORY"
+  say "  Working dir:      $DISCOPARTY_CODEX_WORKING_DIRECTORY"
   say "  Isolated home:    $WORKER_HOME"
   say "  Isolated CODEX_HOME: $CODEX_HOME_DIR"
   say "  Shared skills:    $SHARED_SKILLS_ROOT"
-  say "  Channel trust:    ${THREADKEEP_CODEX_CHANNEL_TRUST:-public}"
-  say "  Sandbox:          $THREADKEEP_CODEX_SANDBOX_MODE"
+  say "  Channel trust:    ${DISCOPARTY_CODEX_CHANNEL_TRUST:-public}"
+  say "  Sandbox:          $DISCOPARTY_CODEX_SANDBOX_MODE"
   say "  Keychain:         service=$KEYCHAIN_SERVICE account=$KEYCHAIN_ACCOUNT"
   say "  LaunchAgent:      $LABEL"
   say "  Plist:            $PLIST_PATH"

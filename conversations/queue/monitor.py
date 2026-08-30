@@ -20,14 +20,14 @@ genuinely STUCK in-flight worker is caught separately by oldest_inflight_age at
 a much higher threshold, so normal long tasks (renders) don't false-alarm.
 
 Configuration (env vars):
-    THREADKEEP_ERRORS_CHANNEL_ID     Discord channel id alerts are posted to
-    THREADKEEP_DISCORD_SCRIPTS       dir holding send_message.py (default approval/)
-    THREADKEEP_CONVERSATIONS_DIR     where logs/ live (default <repo>/conversations)
-    THREADKEEP_PAGE_UNACKED_SEC      (default 120)
-    THREADKEEP_WARN_UNDISPATCHED_SEC (default 180)
-    THREADKEEP_WARN_INFLIGHT_SEC     (default 5400)
-    THREADKEEP_WARN_DEPTH            (default 25)
-    THREADKEEP_REALERT_INFLIGHT_SEC  (default 21600)
+    DISCOPARTY_ERRORS_CHANNEL_ID     Discord channel id alerts are posted to
+    DISCOPARTY_DISCORD_SCRIPTS       dir holding send_message.py (default approval/)
+    DISCOPARTY_CONVERSATIONS_DIR     where logs/ live (default <repo>/conversations)
+    DISCOPARTY_PAGE_UNACKED_SEC      (default 120)
+    DISCOPARTY_WARN_UNDISPATCHED_SEC (default 180)
+    DISCOPARTY_WARN_INFLIGHT_SEC     (default 5400)
+    DISCOPARTY_WARN_DEPTH            (default 25)
+    DISCOPARTY_REALERT_INFLIGHT_SEC  (default 21600)
 """
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ from config import CONFIG  # noqa: E402
 
 _REPO_ROOT = _HERE.parents[1]
 _DISCORD_SCRIPTS = Path(
-    os.environ.get("THREADKEEP_DISCORD_SCRIPTS", str(_REPO_ROOT / "approval"))
+    os.environ.get("DISCOPARTY_DISCORD_SCRIPTS", str(_REPO_ROOT / "approval"))
 ).expanduser()
 SEND = _DISCORD_SCRIPTS / "send_message.py"
 ERRORS_CHANNEL = CONFIG.discord.errors_channel_id
@@ -58,14 +58,14 @@ METRICS_LOG = _LOG_DIR / "queue-metrics.jsonl"
 # row's entire life.
 ALERT_STATE = _LOG_DIR / "queue-monitor-alert-state.json"
 
-PAGE_UNACKED = float(os.environ.get("THREADKEEP_PAGE_UNACKED_SEC", "120"))
-WARN_UNDISPATCHED = float(os.environ.get("THREADKEEP_WARN_UNDISPATCHED_SEC", "180"))
-WARN_INFLIGHT = float(os.environ.get("THREADKEEP_WARN_INFLIGHT_SEC", "5400"))
-WARN_DEPTH = int(os.environ.get("THREADKEEP_WARN_DEPTH", "25"))
+PAGE_UNACKED = float(os.environ.get("DISCOPARTY_PAGE_UNACKED_SEC", "120"))
+WARN_UNDISPATCHED = float(os.environ.get("DISCOPARTY_WARN_UNDISPATCHED_SEC", "180"))
+WARN_INFLIGHT = float(os.environ.get("DISCOPARTY_WARN_INFLIGHT_SEC", "5400"))
+WARN_DEPTH = int(os.environ.get("DISCOPARTY_WARN_DEPTH", "25"))
 # How often to RE-alert on the SAME still-stuck in-flight row (seconds). A
 # genuinely hung worker still nags at this cadence; it just no longer spams the
 # identical WARN every run. Default 6h.
-RE_ALERT_INFLIGHT = float(os.environ.get("THREADKEEP_REALERT_INFLIGHT_SEC", "21600"))
+RE_ALERT_INFLIGHT = float(os.environ.get("DISCOPARTY_REALERT_INFLIGHT_SEC", "21600"))
 
 
 def _alert(text: str) -> None:

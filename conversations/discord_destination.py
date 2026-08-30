@@ -42,7 +42,7 @@ def validate_destination(
         or (allow_errors and channel_id == CONFIG.discord.errors_channel_id)
     )
     if not allowed_root and lib.thread_to_session(channel_id) is None:
-        raise RuntimeError("Discord destination is not a registered Threadkeep thread")
+        raise RuntimeError("Discord destination is not a registered Disco Party thread")
 
     channel = json_request("GET", f"/channels/{channel_id}", token)
     if _snowflake(channel.get("id"), "returned channel ID") != channel_id:
@@ -64,11 +64,11 @@ def validate_destination(
 
 def validate_owner_anchor(token: str, channel_id: str, message_id: str) -> None:
     if _snowflake(channel_id, "anchor channel ID") != CONFIG.discord.chat_channel_id:
-        raise RuntimeError("Threadkeep threads can only be created in the Claude channel")
+        raise RuntimeError("Disco Party threads can only be created in the Claude channel")
     message_id = _snowflake(message_id, "anchor message ID")
     message = json_request(
         "GET", f"/channels/{channel_id}/messages/{message_id}", token
     )
     author = message.get("author")
     if not isinstance(author, dict) or _snowflake(author.get("id"), "anchor author ID") != CONFIG.discord.owner_user_id:
-        raise RuntimeError("Threadkeep thread anchor was not posted by the configured owner")
+        raise RuntimeError("Disco Party thread anchor was not posted by the configured owner")

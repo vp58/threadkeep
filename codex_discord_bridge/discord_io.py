@@ -230,7 +230,7 @@ def _validate_security_event_guild(
 
 
 def dedicated_token(config: Config | None = None) -> str:
-    config = config or Config.from_threadkeep()
+    config = config or Config.from_discoparty()
     for label, value in (
         ("service", config.keychain_service),
         ("account", config.keychain_account),
@@ -322,7 +322,7 @@ async def discord_request(
             headers={
                 "Authorization": f"Bot {token}",
                 "Content-Type": "application/json",
-                "User-Agent": "Threadkeep-Codex-Bridge/0.2",
+                "User-Agent": "Disco Party-Codex-Bridge/0.2",
             },
         )
         try:

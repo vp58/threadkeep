@@ -6,7 +6,7 @@ import sys
 import time
 from pathlib import Path
 
-LOG = Path(os.environ["THREADKEEP_TEST_CALLLOG"])
+LOG = Path(os.environ["DISCOPARTY_TEST_CALLLOG"])
 STATE = LOG.with_name("fake-threads.json")
 
 
@@ -56,12 +56,12 @@ def main():
             raise SystemExit("unsupported thread operation")
         if (
             payload["operation"] == "create"
-            and os.environ.get("THREADKEEP_TEST_THREAD_FAIL_BEFORE_CREATE") == "1"
+            and os.environ.get("DISCOPARTY_TEST_THREAD_FAIL_BEFORE_CREATE") == "1"
         ):
             raise SystemExit(70)
         if (
             payload["operation"] == "recover"
-            and os.environ.get("THREADKEEP_TEST_THREAD_FAIL_BEFORE_RECOVERY") == "1"
+            and os.environ.get("DISCOPARTY_TEST_THREAD_FAIL_BEFORE_RECOVERY") == "1"
         ):
             raise SystemExit(72)
         thread = {
@@ -73,10 +73,10 @@ def main():
         }
         state[message_id] = thread
         save_state(state)
-        delay = float(os.environ.get("THREADKEEP_TEST_THREAD_CREATE_DELAY", "0"))
+        delay = float(os.environ.get("DISCOPARTY_TEST_THREAD_CREATE_DELAY", "0"))
         if delay:
             time.sleep(delay)
-        if os.environ.get("THREADKEEP_TEST_THREAD_CRASH_AFTER_CREATE") == "1":
+        if os.environ.get("DISCOPARTY_TEST_THREAD_CRASH_AFTER_CREATE") == "1":
             raise SystemExit(71)
     elif (
         thread["name"] != payload["name"]

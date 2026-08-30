@@ -8,11 +8,11 @@
 # Flags:
 #   --codex               Remove only the Codex Discord provider. Claude
 #                         services, token, config, and conversations stay.
-#   --label-prefix PREFIX  Match the install prefix. Default: "com.threadkeep".
-#   --tmux-session NAME    tmux session to kill. Default: "threadkeep-chat".
+#   --label-prefix PREFIX  Match the install prefix. Default: "com.discoparty".
+#   --tmux-session NAME    tmux session to kill. Default: "discoparty-chat".
 #   --keep-keychain        Skip Keychain entry deletion.
 #   --keep-chatgpt-login   Keep the ChatGPT login scoped to the isolated
-#                          Threadkeep CODEX_HOME. Default: securely log out.
+#                          Disco Party CODEX_HOME. Default: securely log out.
 #   --keep-conversations   Skip the prompt about archiving conversations dir.
 #   --non-interactive      Don't prompt. Implies --keep-conversations unless
 #                          --archive-conversations is also set.
@@ -23,24 +23,24 @@
 set -euo pipefail
 
 # A caller-supplied credential must not reach even uninstaller setup children.
-unset DISCORD_BOT_TOKEN THREADKEEP_CODEX_DISCORD_BOT_TOKEN OPENAI_API_KEY || true
+unset DISCORD_BOT_TOKEN DISCOPARTY_CODEX_DISCORD_BOT_TOKEN OPENAI_API_KEY || true
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 SECURITY_BIN="/usr/bin/security"
 LAUNCHCTL_BIN="/bin/launchctl"
-if [ "${THREADKEEP_TEST_MODE:-0}" = "1" ]; then
-  SECURITY_BIN="${THREADKEEP_TEST_SECURITY_BIN:-$SECURITY_BIN}"
-  LAUNCHCTL_BIN="${THREADKEEP_TEST_LAUNCHCTL_BIN:-$LAUNCHCTL_BIN}"
-  PYTHON_BIN="${THREADKEEP_TEST_PYTHON_BIN:-$(command -v python3)}"
+if [ "${DISCOPARTY_TEST_MODE:-0}" = "1" ]; then
+  SECURITY_BIN="${DISCOPARTY_TEST_SECURITY_BIN:-$SECURITY_BIN}"
+  LAUNCHCTL_BIN="${DISCOPARTY_TEST_LAUNCHCTL_BIN:-$LAUNCHCTL_BIN}"
+  PYTHON_BIN="${DISCOPARTY_TEST_PYTHON_BIN:-$(command -v python3)}"
 else
   PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
   export PATH
   PYTHON_BIN="$(command -v python3 || true)"
 fi
 
-LABEL_PREFIX="com.threadkeep"
-TMUX_SESSION="threadkeep-chat"
+LABEL_PREFIX="com.discoparty"
+TMUX_SESSION="discoparty-chat"
 TMUX_SESSION_SET=0
 KEEP_KEYCHAIN=0
 KEEP_CHATGPT_LOGIN=0
@@ -49,7 +49,7 @@ NON_INTERACTIVE=0
 ARCHIVE_CONVERSATIONS=0
 CODEX_ONLY=0
 
-KEYCHAIN_SERVICE="threadkeep-secret"
+KEYCHAIN_SERVICE="discoparty-secret"
 KEYCHAIN_ACCOUNT="discord-bot-token"
 
 usage() {
@@ -72,7 +72,7 @@ while [ $# -gt 0 ]; do
 done
 
 if [ "$CODEX_ONLY" = "1" ] && [ "$TMUX_SESSION_SET" = "0" ]; then
-  TMUX_SESSION="threadkeep-codex"
+  TMUX_SESSION="discoparty-codex"
 fi
 
 red()   { printf "\033[31m%s\033[0m\n" "$*"; }
@@ -151,7 +151,7 @@ unload_and_remove_agent() {
 }
 
 canonical_account_home() {
-  if [ "${THREADKEEP_TEST_MODE:-0}" = "1" ]; then
+  if [ "${DISCOPARTY_TEST_MODE:-0}" = "1" ]; then
     printf '%s\n' "$HOME"
     return
   fi
@@ -196,20 +196,20 @@ logout_codex_chatgpt() {
     "PYTHONPATH=$SCRIPT_DIR"
     "PYTHONSAFEPATH=1"
     "PYTHONDONTWRITEBYTECODE=1"
-    "THREADKEEP_CONFIG=$SCRIPT_DIR/config.toml"
+    "DISCOPARTY_CONFIG=$SCRIPT_DIR/config.toml"
   )
-  if [ "${THREADKEEP_TEST_MODE:-0}" = "1" ]; then
+  if [ "${DISCOPARTY_TEST_MODE:-0}" = "1" ]; then
     clean_env+=(
-      "THREADKEEP_TEST_MODE=1"
-      "THREADKEEP_TEST_SECRET_PROBE=${THREADKEEP_TEST_SECRET_PROBE:-}"
-      "THREADKEEP_TEST_SECRET_PROBE_LOG=${THREADKEEP_TEST_SECRET_PROBE_LOG:-}"
-      "THREADKEEP_TEST_EXPECT_REAL_HOME=${THREADKEEP_TEST_EXPECT_REAL_HOME:-$account_home}"
-      "THREADKEEP_TEST_AUTH_LOGOUT_MARKER=${THREADKEEP_TEST_AUTH_LOGOUT_MARKER:-}"
-      "THREADKEEP_TEST_AUTH_LOGOUT_LOG=${THREADKEEP_TEST_AUTH_LOGOUT_LOG:-}"
-      "THREADKEEP_TEST_AUTH_LOGOUT_FAIL=${THREADKEEP_TEST_AUTH_LOGOUT_FAIL:-0}"
-      "THREADKEEP_TEST_ASSERT_CLEAN=${THREADKEEP_TEST_ASSERT_CLEAN:-}"
-      "THREADKEEP_TEST_EXPECT_CONFIG=${THREADKEEP_TEST_EXPECT_CONFIG:-$SCRIPT_DIR/config.toml}"
-      "THREADKEEP_TEST_ORDER_LOG=${THREADKEEP_TEST_ORDER_LOG:-}"
+      "DISCOPARTY_TEST_MODE=1"
+      "DISCOPARTY_TEST_SECRET_PROBE=${DISCOPARTY_TEST_SECRET_PROBE:-}"
+      "DISCOPARTY_TEST_SECRET_PROBE_LOG=${DISCOPARTY_TEST_SECRET_PROBE_LOG:-}"
+      "DISCOPARTY_TEST_EXPECT_REAL_HOME=${DISCOPARTY_TEST_EXPECT_REAL_HOME:-$account_home}"
+      "DISCOPARTY_TEST_AUTH_LOGOUT_MARKER=${DISCOPARTY_TEST_AUTH_LOGOUT_MARKER:-}"
+      "DISCOPARTY_TEST_AUTH_LOGOUT_LOG=${DISCOPARTY_TEST_AUTH_LOGOUT_LOG:-}"
+      "DISCOPARTY_TEST_AUTH_LOGOUT_FAIL=${DISCOPARTY_TEST_AUTH_LOGOUT_FAIL:-0}"
+      "DISCOPARTY_TEST_ASSERT_CLEAN=${DISCOPARTY_TEST_ASSERT_CLEAN:-}"
+      "DISCOPARTY_TEST_EXPECT_CONFIG=${DISCOPARTY_TEST_EXPECT_CONFIG:-$SCRIPT_DIR/config.toml}"
+      "DISCOPARTY_TEST_ORDER_LOG=${DISCOPARTY_TEST_ORDER_LOG:-}"
     )
   fi
   "${clean_env[@]}" "$PYTHON_BIN" -m codex_discord_bridge.codex_auth \
@@ -217,12 +217,12 @@ logout_codex_chatgpt() {
 }
 
 uninstall_codex() {
-  local label="com.threadkeep.codex-discord-bridge"
+  local label="com.discoparty.codex-discord-bridge"
   local agents_dir="$HOME/Library/LaunchAgents"
   local plist="$agents_dir/$label.plist"
   local codex_keychain_account="discord-bot-token-codex"
 
-  say "Threadkeep Codex provider uninstaller (tmux: $TMUX_SESSION)"
+  say "Disco Party Codex provider uninstaller (tmux: $TMUX_SESSION)"
 
   blue "Unloading the Codex LaunchAgent."
   if [ -f "$plist" ] || "$LAUNCHCTL_BIN" print "gui/$UID/$label" >/dev/null 2>&1; then
@@ -243,7 +243,7 @@ uninstall_codex() {
   if [ "$KEEP_CHATGPT_LOGIN" = "1" ]; then
     yellow "Keeping the isolated ChatGPT login (--keep-chatgpt-login)."
   else
-    blue "Removing the ChatGPT login scoped to the isolated Threadkeep CODEX_HOME."
+    blue "Removing the ChatGPT login scoped to the isolated Disco Party CODEX_HOME."
     if ! logout_codex_chatgpt; then
       red "Could not remove and verify the isolated ChatGPT login. Codex state and Discord credentials were left in place."
       return 1
@@ -287,13 +287,13 @@ main() {
   # A caller-supplied install credential must not enter launchctl, tmux, or
   # cleanup subprocesses during removal.
   export -n DISCORD_BOT_TOKEN 2>/dev/null || true
-  unset DISCORD_BOT_TOKEN THREADKEEP_CODEX_DISCORD_BOT_TOKEN OPENAI_API_KEY || true
+  unset DISCORD_BOT_TOKEN DISCOPARTY_CODEX_DISCORD_BOT_TOKEN OPENAI_API_KEY || true
   if [ "$CODEX_ONLY" = "1" ]; then
     uninstall_codex
     return
   fi
 
-  say "Threadkeep uninstaller (label prefix: $LABEL_PREFIX, tmux: $TMUX_SESSION)"
+  say "Disco Party uninstaller (label prefix: $LABEL_PREFIX, tmux: $TMUX_SESSION)"
 
   # ----- launchd -----
   local agents_dir="$HOME/Library/LaunchAgents"
@@ -345,8 +345,8 @@ main() {
   fi
 
   # ----- conversations dir -----
-  if [ -f "$HOME/.threadkeep/conversations/_registry.json" ] || [ -d "$HOME/.threadkeep/conversations/active" ]; then
-    local convo_dir="$HOME/.threadkeep/conversations"
+  if [ -f "$HOME/.discoparty/conversations/_registry.json" ] || [ -d "$HOME/.discoparty/conversations/active" ]; then
+    local convo_dir="$HOME/.discoparty/conversations"
     if [ "$ARCHIVE_CONVERSATIONS" = "1" ]; then
       local stamp
       stamp=$(date "+%Y%m%d-%H%M%S")

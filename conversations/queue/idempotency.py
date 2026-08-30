@@ -43,7 +43,7 @@ _STATES = {
 def _db_path(db_path: Optional[str | Path] = None) -> Path:
     if db_path is not None:
         return Path(db_path)
-    configured = os.environ.get("THREADKEEP_MQ_DB")
+    configured = os.environ.get("DISCOPARTY_MQ_DB")
     if configured:
         return Path(configured).expanduser()
     return CONFIG.paths.conversations_dir / "state" / "mq.sqlite3"

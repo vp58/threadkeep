@@ -6,7 +6,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REAL_PYTHON="$(command -v python3)"
-TEST_ROOT="$(mktemp -d "$HOME/.threadkeep-codex-install-test.XXXXXX")"
+TEST_ROOT="$(mktemp -d "$HOME/.discoparty-codex-install-test.XXXXXX")"
 
 cleanup() {
   local status=$?
@@ -27,7 +27,7 @@ cleanup() {
 trap cleanup EXIT
 
 TEST_HOME="$TEST_ROOT/home"
-APP_SUPPORT_ROOT="$TEST_HOME/Library/Application Support/Threadkeep"
+APP_SUPPORT_ROOT="$TEST_HOME/Library/Application Support/Discoparty"
 TEST_REPO="$APP_SUPPORT_ROOT/repo"
 CANONICAL_TEST_HOME="$("$REAL_PYTHON" -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).resolve())' "$TEST_HOME")"
 FAKE_BIN="$TEST_ROOT/fake-bin"
@@ -148,12 +148,12 @@ cp "$REPO_ROOT/codex_discord_bridge/shared_hooks.py" "$TEST_REPO/codex_discord_b
 cp "$REPO_ROOT/codex_discord_bridge/store.py" "$TEST_REPO/codex_discord_bridge/store.py"
 cp "$REPO_ROOT/launchd/codex-monitor.sh" "$TEST_REPO/launchd/codex-monitor.sh"
 cp \
-  "$REPO_ROOT/launchd/templates/com.threadkeep.codex-discord-bridge.plist.template" \
-  "$TEST_REPO/launchd/templates/com.threadkeep.codex-discord-bridge.plist.template"
+  "$REPO_ROOT/launchd/templates/com.discoparty.codex-discord-bridge.plist.template" \
+  "$TEST_REPO/launchd/templates/com.discoparty.codex-discord-bridge.plist.template"
 for template in \
-  com.threadkeep.cx-chat-healthcheck.plist.template \
-  com.threadkeep.discord-gateway-client.plist.template \
-  com.threadkeep.discord-marker-watcher.plist.template; do
+  com.discoparty.cx-chat-healthcheck.plist.template \
+  com.discoparty.discord-gateway-client.plist.template \
+  com.discoparty.discord-marker-watcher.plist.template; do
   cp "$REPO_ROOT/launchd/templates/$template" "$TEST_REPO/launchd/templates/$template"
 done
 touch "$TEST_REPO/codex_discord_bridge/main.py"
@@ -225,8 +225,8 @@ keep_me = "untouched"
 
 [codex]
 enabled = false
-state_dir = "~/Library/Application Support/Threadkeep/codex-discord"
-codex_home = "~/Library/Application Support/Threadkeep/codex-discord/home/.codex"
+state_dir = "~/Library/Application Support/Discoparty/codex-discord"
+codex_home = "~/Library/Application Support/Discoparty/codex-discord/home/.codex"
 instructions_file = "$TEST_ROOT/trusted-instructions.md"
 max_messages_per_minute = 6
 max_messages_per_hour = 24
@@ -254,12 +254,12 @@ for secret in 'codex-test-token-without-spaces-123' 'claude-token'; do
     fi
   done < <(/usr/bin/env)
 done
-printf 'ok %s\n' "${1##*/}" >> "$THREADKEEP_TEST_SECRET_PROBE_LOG"
+printf 'ok %s\n' "${1##*/}" >> "$DISCOPARTY_TEST_SECRET_PROBE_LOG"
 EOF
 
 cat > "$FAKE_BIN/uname" <<'EOF'
 #!/usr/bin/env bash
-"${THREADKEEP_TEST_SECRET_PROBE:?}" "$0" "$@"
+"${DISCOPARTY_TEST_SECRET_PROBE:?}" "$0" "$@"
 case "${1:-}" in
   -s) echo Darwin ;;
   -m) echo arm64 ;;
@@ -269,7 +269,7 @@ EOF
 
 cat > "$FAKE_BIN/sysctl" <<'EOF'
 #!/usr/bin/env bash
-"${THREADKEEP_TEST_SECRET_PROBE:?}" "$0" "$@"
+"${DISCOPARTY_TEST_SECRET_PROBE:?}" "$0" "$@"
 if [ "${1:-}" = "-n" ] && [ "${2:-}" = "machdep.cpu.brand_string" ]; then
   echo "Apple M5 Max"
   exit 0
@@ -279,14 +279,14 @@ EOF
 
 cat > "$FAKE_BIN/codex" <<'EOF'
 #!/usr/bin/env bash
-"${THREADKEEP_TEST_SECRET_PROBE:?}" "$0" "$@"
+"${DISCOPARTY_TEST_SECRET_PROBE:?}" "$0" "$@"
 case "${1:-}" in
   --version) echo "codex-cli 0.151.0" ;;
   login)
     [ "${2:-}" = "status" ] || exit 2
     [ -n "${CODEX_HOME:-}" ] || exit 3
-    [ "$HOME" = "${THREADKEEP_TEST_EXPECT_REAL_HOME:?}" ] || exit 4
-    if [ "${THREADKEEP_TEST_AUTH_SCENARIO:-}" = "filesystem-artifact" ]; then
+    [ "$HOME" = "${DISCOPARTY_TEST_EXPECT_REAL_HOME:?}" ] || exit 4
+    if [ "${DISCOPARTY_TEST_AUTH_SCENARIO:-}" = "filesystem-artifact" ]; then
       printf '%s\n' '{}' > "$CODEX_HOME/auth.json"
       chmod 600 "$CODEX_HOME/auth.json"
     fi
@@ -298,21 +298,21 @@ EOF
 
 cat > "$FAKE_BIN/python3" <<'EOF'
 #!/usr/bin/env bash
-"${THREADKEEP_TEST_SECRET_PROBE:?}" "$0" "$@"
+"${DISCOPARTY_TEST_SECRET_PROBE:?}" "$0" "$@"
 if [ "${1:-}" = "-c" ] && [ "${2:-}" = "import websockets" ]; then
   exit 0
 fi
 if [ "${1##*/}" = "claude_cli.py" ]; then
   [ "${2:-}" = "verify" ] || exit 84
   [ "${3:-}" = "--path" ] || exit 84
-  [ "${4:-}" = "$THREADKEEP_TEST_CLAUDE_BIN" ] || exit 84
+  [ "${4:-}" = "$DISCOPARTY_TEST_CLAUDE_BIN" ] || exit 84
   printf '%s\n' '{"checks":{"claude_cli":"pass"}}'
   exit 0
 fi
 if [ "${1##*/}" = "bun_runtime.py" ]; then
   [ "${2:-}" = "verify" ] || exit 85
   [ "${3:-}" = "--path" ] || exit 85
-  [ "${4:-}" = "$THREADKEEP_TEST_BUN_BIN" ] || exit 85
+  [ "${4:-}" = "$DISCOPARTY_TEST_BUN_BIN" ] || exit 85
   printf '%s\n' '{"checks":{"bun_runtime":"pass"}}'
   exit 0
 fi
@@ -320,7 +320,7 @@ if [ "${1##*/}" = "discord_access.py" ]; then
   # Production binds the state path to pwd(3), not ambient HOME. Model this
   # scratch HOME as the account database entry without changing the copied
   # production module or weakening its canonical-home boundary.
-  exec "$THREADKEEP_TEST_REAL_PYTHON" - "$@" <<'PY'
+  exec "$DISCOPARTY_TEST_REAL_PYTHON" - "$@" <<'PY'
 import os
 import pwd
 import runpy
@@ -348,21 +348,21 @@ if [ "${1##*/}" = "shared_skills.py" ]; then
 fi
 if [ "${1:-}" = "-m" ] && [ "${2:-}" = "codex_discord_bridge.preflight" ]; then
   [ "${OPENAI_API_KEY+x}" != "x" ] || exit 91
-  [ -n "${THREADKEEP_CONFIG:-}" ] || exit 92
-  [ "${THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED+x}" != "x" ] || exit 94
-  "$THREADKEEP_TEST_REAL_PYTHON" - <<'PY'
+  [ -n "${DISCOPARTY_CONFIG:-}" ] || exit 92
+  [ "${DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED+x}" != "x" ] || exit 94
+  "$DISCOPARTY_TEST_REAL_PYTHON" - <<'PY'
 import os
 
 from conversations.config import CONFIG
 
-expected = os.environ["THREADKEEP_CODEX_SANDBOX_MODE"] == "danger-full-access"
+expected = os.environ["DISCOPARTY_CODEX_SANDBOX_MODE"] == "danger-full-access"
 assert CONFIG.codex.full_computer_access_accepted is expected
 PY
-  if [ "${THREADKEEP_TEST_PREFLIGHT_LOG_SYMLINK:-0}" = "1" ]; then
-    : > "$THREADKEEP_TEST_LOG_SWAP_TARGET"
-    /bin/rm -f "$THREADKEEP_REPO_ROOT/logs/codex-discord-bridge.stdout.log"
-    /bin/ln -s "$THREADKEEP_TEST_LOG_SWAP_TARGET" \
-      "$THREADKEEP_REPO_ROOT/logs/codex-discord-bridge.stdout.log"
+  if [ "${DISCOPARTY_TEST_PREFLIGHT_LOG_SYMLINK:-0}" = "1" ]; then
+    : > "$DISCOPARTY_TEST_LOG_SWAP_TARGET"
+    /bin/rm -f "$DISCOPARTY_REPO_ROOT/logs/codex-discord-bridge.stdout.log"
+    /bin/ln -s "$DISCOPARTY_TEST_LOG_SWAP_TARGET" \
+      "$DISCOPARTY_REPO_ROOT/logs/codex-discord-bridge.stdout.log"
   fi
   printf '%s\n' '{"checks":{"smoke_preflight":"pass"},"warnings":{}}'
   exit 0
@@ -370,14 +370,14 @@ fi
 if [ "${1:-}" = "-m" ] && \
    [ "${2:-}" = "codex_discord_bridge.codex_auth" ] && \
    [ "${3:-}" = "logout-configured" ]; then
-  [ "$HOME" = "${THREADKEEP_TEST_EXPECT_REAL_HOME:?}" ] || exit 95
-  [ -n "${THREADKEEP_CONFIG:-}" ] || exit 95
-  [ -n "${THREADKEEP_TEST_AUTH_LOGOUT_MARKER:-}" ] || exit 95
-  if [ "${THREADKEEP_TEST_AUTH_LOGOUT_FAIL:-0}" = "1" ]; then
+  [ "$HOME" = "${DISCOPARTY_TEST_EXPECT_REAL_HOME:?}" ] || exit 95
+  [ -n "${DISCOPARTY_CONFIG:-}" ] || exit 95
+  [ -n "${DISCOPARTY_TEST_AUTH_LOGOUT_MARKER:-}" ] || exit 95
+  if [ "${DISCOPARTY_TEST_AUTH_LOGOUT_FAIL:-0}" = "1" ]; then
     exit 95
   fi
-  rm -f "$THREADKEEP_TEST_AUTH_LOGOUT_MARKER"
-  printf '%s\n' 'logout-configured' >> "${THREADKEEP_TEST_AUTH_LOGOUT_LOG:?}"
+  rm -f "$DISCOPARTY_TEST_AUTH_LOGOUT_MARKER"
+  printf '%s\n' 'logout-configured' >> "${DISCOPARTY_TEST_AUTH_LOGOUT_LOG:?}"
   printf '%s\n' 'Isolated ChatGPT logout verified.'
   exit 0
 fi
@@ -397,13 +397,13 @@ if [ "${1##*/}" = "discord_permissions.py" ]; then
   printf '%s\n' '{"checks":{"claude_permissions":"pass"}}'
   exit 0
 fi
-exec "$THREADKEEP_TEST_REAL_PYTHON" "$@"
+exec "$DISCOPARTY_TEST_REAL_PYTHON" "$@"
 EOF
 
 cat > "$FAKE_BIN/security" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-"${THREADKEEP_TEST_SECRET_PROBE:?}" "$0" "$@"
+"${DISCOPARTY_TEST_SECRET_PROBE:?}" "$0" "$@"
 operation="${1:-}"
 shift || true
 account=""
@@ -455,7 +455,7 @@ EOF
 cat > "$FAKE_BIN/plutil" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-"${THREADKEEP_TEST_SECRET_PROBE:?}" "$0" "$@"
+"${DISCOPARTY_TEST_SECRET_PROBE:?}" "$0" "$@"
 [ "${1:-}" = "-lint" ] || exit 2
 python3 - "$2" <<'PY'
 import plistlib
@@ -467,16 +467,16 @@ EOF
 
 cat > "$FAKE_BIN/launchctl" <<'EOF'
 #!/usr/bin/env bash
-"${THREADKEEP_TEST_SECRET_PROBE:?}" "$0" "$@"
-printf '%s\n' "$*" >> "$THREADKEEP_TEST_LAUNCHCTL_LOG"
-if [ -n "${THREADKEEP_TEST_INSTALL_ORDER_LOG:-}" ]; then
-  printf 'launchctl %s\n' "$*" >> "$THREADKEEP_TEST_INSTALL_ORDER_LOG"
+"${DISCOPARTY_TEST_SECRET_PROBE:?}" "$0" "$@"
+printf '%s\n' "$*" >> "$DISCOPARTY_TEST_LAUNCHCTL_LOG"
+if [ -n "${DISCOPARTY_TEST_INSTALL_ORDER_LOG:-}" ]; then
+  printf 'launchctl %s\n' "$*" >> "$DISCOPARTY_TEST_INSTALL_ORDER_LOG"
 fi
-if [ "${THREADKEEP_TEST_LAUNCHCTL_SCENARIO:-}" = "loaded-bootout-fails" ]; then
+if [ "${DISCOPARTY_TEST_LAUNCHCTL_SCENARIO:-}" = "loaded-bootout-fails" ]; then
   case "${1:-}" in
     print)
-      if [ -n "${THREADKEEP_TEST_LAUNCHCTL_LOADED_LABEL:-}" ] && \
-        [ "${2:-}" != "gui/$UID/$THREADKEEP_TEST_LAUNCHCTL_LOADED_LABEL" ]; then
+      if [ -n "${DISCOPARTY_TEST_LAUNCHCTL_LOADED_LABEL:-}" ] && \
+        [ "${2:-}" != "gui/$UID/$DISCOPARTY_TEST_LAUNCHCTL_LOADED_LABEL" ]; then
         exit 1
       fi
       exit 0
@@ -486,32 +486,32 @@ if [ "${THREADKEEP_TEST_LAUNCHCTL_SCENARIO:-}" = "loaded-bootout-fails" ]; then
     *) exit 2 ;;
   esac
 fi
-if [ "${THREADKEEP_TEST_LAUNCHCTL_SCENARIO:-}" = "stateful" ]; then
-  state_file="${THREADKEEP_TEST_LAUNCHCTL_STATE:?}"
+if [ "${DISCOPARTY_TEST_LAUNCHCTL_SCENARIO:-}" = "stateful" ]; then
+  state_file="${DISCOPARTY_TEST_LAUNCHCTL_STATE:?}"
   case "${1:-}" in
     print)
-      if [ -n "${THREADKEEP_TEST_LAUNCHCTL_LOADED_LABEL:-}" ] && \
-        [ "${2:-}" != "gui/$UID/$THREADKEEP_TEST_LAUNCHCTL_LOADED_LABEL" ]; then
+      if [ -n "${DISCOPARTY_TEST_LAUNCHCTL_LOADED_LABEL:-}" ] && \
+        [ "${2:-}" != "gui/$UID/$DISCOPARTY_TEST_LAUNCHCTL_LOADED_LABEL" ]; then
         exit 1
       fi
       [ "$(cat "$state_file" 2>/dev/null || true)" = "loaded" ]
       ;;
     bootout)
-      if [ -n "${THREADKEEP_TEST_LAUNCHCTL_LOADED_LABEL:-}" ] && \
-        [ "${2:-}" != "gui/$UID/$THREADKEEP_TEST_LAUNCHCTL_LOADED_LABEL" ]; then
+      if [ -n "${DISCOPARTY_TEST_LAUNCHCTL_LOADED_LABEL:-}" ] && \
+        [ "${2:-}" != "gui/$UID/$DISCOPARTY_TEST_LAUNCHCTL_LOADED_LABEL" ]; then
         exit 1
       fi
       [ "$(cat "$state_file" 2>/dev/null || true)" = "loaded" ] || exit 93
       printf '%s\n' unloaded > "$state_file"
       ;;
     bootstrap)
-      if [ -n "${THREADKEEP_TEST_EXPECT_RESTORED_CONFIG_PATH:-}" ]; then
-        [ "$(cat "$THREADKEEP_TEST_EXPECT_RESTORED_CONFIG_PATH")" = \
-          "$THREADKEEP_TEST_EXPECT_RESTORED_CONFIG_VALUE" ] || exit 86
-        [ "$(cat "$THREADKEEP_TEST_EXPECT_RESTORED_CODEX_CONFIG_PATH")" = \
-          "$THREADKEEP_TEST_EXPECT_RESTORED_CODEX_CONFIG_VALUE" ] || exit 87
-        [ "$(cat "$THREADKEEP_TEST_EXPECT_RESTORED_KEYCHAIN_PATH")" = \
-          "$THREADKEEP_TEST_EXPECT_RESTORED_KEYCHAIN_VALUE" ] || exit 88
+      if [ -n "${DISCOPARTY_TEST_EXPECT_RESTORED_CONFIG_PATH:-}" ]; then
+        [ "$(cat "$DISCOPARTY_TEST_EXPECT_RESTORED_CONFIG_PATH")" = \
+          "$DISCOPARTY_TEST_EXPECT_RESTORED_CONFIG_VALUE" ] || exit 86
+        [ "$(cat "$DISCOPARTY_TEST_EXPECT_RESTORED_CODEX_CONFIG_PATH")" = \
+          "$DISCOPARTY_TEST_EXPECT_RESTORED_CODEX_CONFIG_VALUE" ] || exit 87
+        [ "$(cat "$DISCOPARTY_TEST_EXPECT_RESTORED_KEYCHAIN_PATH")" = \
+          "$DISCOPARTY_TEST_EXPECT_RESTORED_KEYCHAIN_VALUE" ] || exit 88
       fi
       printf '%s\n' loaded > "$state_file"
       ;;
@@ -529,11 +529,11 @@ EOF
 
 cat > "$FAKE_BIN/tmux" <<'EOF'
 #!/usr/bin/env bash
-"${THREADKEEP_TEST_SECRET_PROBE:?}" "$0" "$@"
+"${DISCOPARTY_TEST_SECRET_PROBE:?}" "$0" "$@"
 if [ "${1:-}" = "has-session" ]; then
   [ "${2:-}" = "-t" ] || exit 2
   [ "${3:-}" = "=cx-chat" ] || exit 1
-  [ "${THREADKEEP_TEST_LEGACY_TMUX:-0}" = "1" ]
+  [ "${DISCOPARTY_TEST_LEGACY_TMUX:-0}" = "1" ]
   exit $?
 fi
 exit 0
@@ -542,7 +542,7 @@ EOF
 cat > "$FAKE_BIN/claude" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-"${THREADKEEP_TEST_SECRET_PROBE:?}" "$0" "$@"
+"${DISCOPARTY_TEST_SECRET_PROBE:?}" "$0" "$@"
 if [ "${1:-}" = "plugin" ] && [ "${2:-}" = "list" ]; then
   printf '%s\n' 'discord@claude-plugins-official'
   exit 0
@@ -560,26 +560,26 @@ chmod 755 "$FAKE_BIN"/*
 COMMON_ENV=(
   "HOME=$TEST_HOME"
   "PATH=$FAKE_BIN:/usr/bin:/bin:/usr/sbin:/sbin"
-  "THREADKEEP_TEST_REAL_PYTHON=$REAL_PYTHON"
-  "THREADKEEP_TEST_LAUNCHCTL_LOG=$LAUNCHCTL_LOG"
-  "THREADKEEP_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret"
-  "THREADKEEP_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG"
-  "THREADKEEP_TEST_EXPECT_REAL_HOME=$TEST_HOME"
-  "THREADKEEP_TEST_PYTHON_BIN=$FAKE_BIN/python3"
-  "THREADKEEP_TEST_SECURITY_BIN=$FAKE_BIN/security"
-  "THREADKEEP_TEST_LAUNCHCTL_BIN=$FAKE_BIN/launchctl"
-  "THREADKEEP_TEST_PLUTIL_BIN=$FAKE_BIN/plutil"
-  "THREADKEEP_TEST_UNAME_BIN=$FAKE_BIN/uname"
-  "THREADKEEP_TEST_SYSCTL_BIN=$FAKE_BIN/sysctl"
-  "THREADKEEP_REPO_ROOT=$TEST_REPO"
-  "THREADKEEP_CODEX_BIN=$FAKE_BIN/codex"
-  "THREADKEEP_CODEX_GUILD_ID=100000000000000001"
-  "THREADKEEP_CODEX_CHANNEL_ID=100000000000000002"
-  "THREADKEEP_CODEX_OWNER_USER_ID=100000000000000003"
-  "THREADKEEP_CODEX_BOT_USER_ID=100000000000000004"
-  "THREADKEEP_CODEX_APPLICATION_ID=100000000000000005"
-  "THREADKEEP_CODEX_WORKING_DIRECTORY=$WORK_DIR"
-  "THREADKEEP_CODEX_SANDBOX_MODE=workspace-write"
+  "DISCOPARTY_TEST_REAL_PYTHON=$REAL_PYTHON"
+  "DISCOPARTY_TEST_LAUNCHCTL_LOG=$LAUNCHCTL_LOG"
+  "DISCOPARTY_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret"
+  "DISCOPARTY_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG"
+  "DISCOPARTY_TEST_EXPECT_REAL_HOME=$TEST_HOME"
+  "DISCOPARTY_TEST_PYTHON_BIN=$FAKE_BIN/python3"
+  "DISCOPARTY_TEST_SECURITY_BIN=$FAKE_BIN/security"
+  "DISCOPARTY_TEST_LAUNCHCTL_BIN=$FAKE_BIN/launchctl"
+  "DISCOPARTY_TEST_PLUTIL_BIN=$FAKE_BIN/plutil"
+  "DISCOPARTY_TEST_UNAME_BIN=$FAKE_BIN/uname"
+  "DISCOPARTY_TEST_SYSCTL_BIN=$FAKE_BIN/sysctl"
+  "DISCOPARTY_REPO_ROOT=$TEST_REPO"
+  "DISCOPARTY_CODEX_BIN=$FAKE_BIN/codex"
+  "DISCOPARTY_CODEX_GUILD_ID=100000000000000001"
+  "DISCOPARTY_CODEX_CHANNEL_ID=100000000000000002"
+  "DISCOPARTY_CODEX_OWNER_USER_ID=100000000000000003"
+  "DISCOPARTY_CODEX_BOT_USER_ID=100000000000000004"
+  "DISCOPARTY_CODEX_APPLICATION_ID=100000000000000005"
+  "DISCOPARTY_CODEX_WORKING_DIRECTORY=$WORK_DIR"
+  "DISCOPARTY_CODEX_SANDBOX_MODE=workspace-write"
   "OLD_KEYCHAIN_TOKEN=codex-test-token-without-spaces-123"
 )
 
@@ -591,33 +591,33 @@ chmod 600 "$TEST_HOME/.fake-keychain-discord-bot-token-codex"
 
 FORBIDDEN_ENV_TOKEN='forbidden-environment-token-should-not-be-read'
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_DISCORD_BOT_TOKEN="$FORBIDDEN_ENV_TOKEN" \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+  DISCOPARTY_CODEX_DISCORD_BOT_TOKEN="$FORBIDDEN_ENV_TOKEN" \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/discord-token-env.log" 2>&1; then
   echo "installer accepted a Discord token from the process environment" >&2
   exit 1
 fi
-grep -Fq "THREADKEEP_CODEX_DISCORD_BOT_TOKEN is forbidden" \
+grep -Fq "DISCOPARTY_CODEX_DISCORD_BOT_TOKEN is forbidden" \
   "$TEST_ROOT/discord-token-env.log"
 ! grep -Fq "$FORBIDDEN_ENV_TOKEN" "$TEST_ROOT/discord-token-env.log"
 
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_SANDBOX_MODE=danger-full-access \
-  THREADKEEP_CODEX_CHANNEL_TRUST=public \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=not-accepted \
+  DISCOPARTY_CODEX_SANDBOX_MODE=danger-full-access \
+  DISCOPARTY_CODEX_CHANNEL_TRUST=public \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=not-accepted \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/wrong-acceptance.log" 2>&1; then
   echo "installer accepted danger-full-access without the exact acknowledgement" >&2
   exit 1
 fi
-grep -Fq "requires THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED" \
+grep -Fq "requires DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED" \
   "$TEST_ROOT/wrong-acceptance.log"
-test ! -e "$TEST_HOME/Library/Application Support/Threadkeep/codex-discord"
+test ! -e "$TEST_HOME/Library/Application Support/Discoparty/codex-discord"
 
 cat > "$FAKE_BIN/sysctl-base-m5" <<'EOF'
 #!/usr/bin/env bash
-"${THREADKEEP_TEST_SECRET_PROBE:?}" "$0" "$@"
+"${DISCOPARTY_TEST_SECRET_PROBE:?}" "$0" "$@"
 if [ "${1:-}" = "-n" ] && [ "${2:-}" = "machdep.cpu.brand_string" ]; then
   echo "Apple M5"
   exit 0
@@ -626,18 +626,18 @@ exit 2
 EOF
 chmod 755 "$FAKE_BIN/sysctl-base-m5"
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_TEST_SYSCTL_BIN="$FAKE_BIN/sysctl-base-m5" \
+  DISCOPARTY_TEST_SYSCTL_BIN="$FAKE_BIN/sysctl-base-m5" \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/base-m5.log" 2>&1; then
   echo "installer accepted a base Apple M5 host" >&2
   exit 1
 fi
 grep -Fq "targets the reviewed Apple M5 Max host" "$TEST_ROOT/base-m5.log"
-test ! -e "$TEST_HOME/Library/Application Support/Threadkeep/codex-discord"
+test ! -e "$TEST_HOME/Library/Application Support/Discoparty/codex-discord"
 
 if env "${COMMON_ENV[@]}" \
   OPENAI_API_KEY=forbidden \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/api-key.log" 2>&1; then
   echo "installer accepted OPENAI_API_KEY" >&2
@@ -647,20 +647,20 @@ grep -Fq "OPENAI_API_KEY must be unset" "$TEST_ROOT/api-key.log"
 
 OUTSIDE_APPROVED_STATE="$TEST_HOME/outside-approved-root"
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_STATE_DIR="$OUTSIDE_APPROVED_STATE" \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+  DISCOPARTY_CODEX_STATE_DIR="$OUTSIDE_APPROVED_STATE" \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/state-approved-root.log" 2>&1; then
   echo "installer accepted a state directory outside the approved macOS root" >&2
   exit 1
 fi
-grep -Fq "state_dir must stay under canonical ~/Library/Application Support/Threadkeep" \
+grep -Fq "state_dir must stay under canonical ~/Library/Application Support/Discoparty" \
   "$TEST_ROOT/state-approved-root.log"
 test ! -e "$OUTSIDE_APPROVED_STATE"
 
 chmod 777 "$TEST_HOME"
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/home-mode.log" 2>&1; then
   echo "installer accepted a group/world-writable HOME" >&2
@@ -672,7 +672,7 @@ chmod 700 "$TEST_HOME"
 
 chmod 777 "$TEST_HOME/Library/Application Support"
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/application-support-mode.log" 2>&1; then
   echo "installer accepted a writable Application Support ancestry" >&2
@@ -684,32 +684,32 @@ chmod 700 "$TEST_HOME/Library/Application Support"
 
 UNSAFE_REPO_STATE="$TEST_REPO/unsafe-codex-state"
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_STATE_DIR="$UNSAFE_REPO_STATE" \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+  DISCOPARTY_CODEX_STATE_DIR="$UNSAFE_REPO_STATE" \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/state-repo-overlap.log" 2>&1; then
   echo "installer accepted a state directory inside the repository" >&2
   exit 1
 fi
-grep -Fq "state_dir must not overlap the Threadkeep repository" \
+grep -Fq "state_dir must not overlap the Disco Party repository" \
   "$TEST_ROOT/state-repo-overlap.log"
 test ! -e "$UNSAFE_REPO_STATE"
 
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_WORKING_DIRECTORY="$TEST_REPO" \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+  DISCOPARTY_CODEX_WORKING_DIRECTORY="$TEST_REPO" \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/workspace-repo-overlap.log" 2>&1; then
   echo "installer accepted a workspace that overlaps the repository" >&2
   exit 1
 fi
-grep -Fq "working_directory must not overlap the Threadkeep repository" \
+grep -Fq "working_directory must not overlap the Disco Party repository" \
   "$TEST_ROOT/workspace-repo-overlap.log"
 
 SHARED_TEST_ROOT="$TEST_ROOT/claude-workspace/x_System/Skills"
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_WORKING_DIRECTORY="$SHARED_TEST_ROOT" \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+  DISCOPARTY_CODEX_WORKING_DIRECTORY="$SHARED_TEST_ROOT" \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/workspace-shared-skills-equal.log" 2>&1; then
   echo "installer accepted the canonical shared skill root as its workspace" >&2
@@ -719,8 +719,8 @@ grep -Fq "canonical shared Vault skill root must not overlap the Codex working_d
   "$TEST_ROOT/workspace-shared-skills-equal.log"
 
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_WORKING_DIRECTORY="$SHARED_TEST_ROOT/eli5" \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+  DISCOPARTY_CODEX_WORKING_DIRECTORY="$SHARED_TEST_ROOT/eli5" \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/workspace-shared-skills-descendant.log" 2>&1; then
   echo "installer accepted a shared skill child as its workspace" >&2
@@ -730,8 +730,8 @@ grep -Fq "canonical shared Vault skill root must not overlap the Codex working_d
   "$TEST_ROOT/workspace-shared-skills-descendant.log"
 
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_WORKING_DIRECTORY="$SHARED_TEST_ROOT/.." \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+  DISCOPARTY_CODEX_WORKING_DIRECTORY="$SHARED_TEST_ROOT/.." \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/workspace-shared-skills-ancestor.log" 2>&1; then
   echo "installer accepted a shared skill ancestor as its workspace" >&2
@@ -744,8 +744,8 @@ SHARED_TEST_ALIAS="/System/Volumes/Data$TEST_ROOT/claude-workspace/x_System"
 if [ -d "$SHARED_TEST_ALIAS" ] && \
   [ "$SHARED_TEST_ALIAS" -ef "$TEST_ROOT/claude-workspace/x_System" ]; then
   if env "${COMMON_ENV[@]}" \
-    THREADKEEP_CODEX_WORKING_DIRECTORY="$SHARED_TEST_ALIAS" \
-    THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+    DISCOPARTY_CODEX_WORKING_DIRECTORY="$SHARED_TEST_ALIAS" \
+    DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
     "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
     >"$TEST_ROOT/workspace-shared-skills-alias.log" 2>&1; then
     echo "installer accepted a filesystem alias containing the shared skills" >&2
@@ -758,9 +758,9 @@ fi
 OVERLAP_WORKSPACE="$APP_SUPPORT_ROOT/overlap-workspace"
 mkdir "$OVERLAP_WORKSPACE"
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_WORKING_DIRECTORY="$OVERLAP_WORKSPACE" \
-  THREADKEEP_CODEX_STATE_DIR="$OVERLAP_WORKSPACE/codex-state" \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+  DISCOPARTY_CODEX_WORKING_DIRECTORY="$OVERLAP_WORKSPACE" \
+  DISCOPARTY_CODEX_STATE_DIR="$OVERLAP_WORKSPACE/codex-state" \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/state-workspace-overlap.log" 2>&1; then
   echo "installer accepted overlapping workspace and state directories" >&2
@@ -772,9 +772,9 @@ test ! -e "$OVERLAP_WORKSPACE/codex-state"
 rmdir "$OVERLAP_WORKSPACE"
 
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_WORKING_DIRECTORY="$TEST_HOME/Library/LaunchAgents" \
-  THREADKEEP_CODEX_STATE_DIR="$APP_SUPPORT_ROOT/safe-control-test-state" \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+  DISCOPARTY_CODEX_WORKING_DIRECTORY="$TEST_HOME/Library/LaunchAgents" \
+  DISCOPARTY_CODEX_STATE_DIR="$APP_SUPPORT_ROOT/safe-control-test-state" \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/workspace-control-overlap.log" 2>&1; then
   echo "installer accepted a workspace containing LaunchAgent controls" >&2
@@ -786,8 +786,8 @@ grep -Fq "Codex LaunchAgent plist must not overlap the Codex working_directory" 
 mkdir "$APP_SUPPORT_ROOT/state-target"
 ln -s "$APP_SUPPORT_ROOT/state-target" "$APP_SUPPORT_ROOT/state-link"
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_STATE_DIR="$APP_SUPPORT_ROOT/state-link" \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+  DISCOPARTY_CODEX_STATE_DIR="$APP_SUPPORT_ROOT/state-link" \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/state-symlink.log" 2>&1; then
   echo "installer accepted a symlinked state directory" >&2
@@ -801,8 +801,8 @@ rmdir "$APP_SUPPORT_ROOT/state-target"
 mkdir "$APP_SUPPORT_ROOT/unsafe-state-parent"
 chmod 777 "$APP_SUPPORT_ROOT/unsafe-state-parent"
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_STATE_DIR="$APP_SUPPORT_ROOT/unsafe-state-parent/codex-state" \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+  DISCOPARTY_CODEX_STATE_DIR="$APP_SUPPORT_ROOT/unsafe-state-parent/codex-state" \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/state-parent-mode.log" 2>&1; then
   echo "installer accepted a group/world-writable state ancestor" >&2
@@ -817,7 +817,7 @@ rmdir "$APP_SUPPORT_ROOT/unsafe-state-parent"
 mkdir "$TEST_ROOT/log-target"
 ln -s "$TEST_ROOT/log-target" "$TEST_REPO/logs"
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/log-symlink.log" 2>&1; then
   echo "installer accepted a symlinked logs directory" >&2
@@ -833,7 +833,7 @@ touch "$TEST_ROOT/stdout-target.log"
 ln -s "$TEST_ROOT/stdout-target.log" \
   "$TEST_REPO/logs/codex-discord-bridge.stdout.log"
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/stdout-log-symlink.log" 2>&1; then
   echo "installer accepted a symlinked stdout log" >&2
@@ -847,28 +847,28 @@ rm -f "$TEST_ROOT/stdout-target.log"
 
 chmod 666 "$TEST_REPO/config.toml"
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/config-mode.log" 2>&1; then
   echo "installer accepted a group/world-writable config" >&2
   exit 1
 fi
-grep -Fq "Threadkeep config must not be group/world writable" \
+grep -Fq "Disco Party config must not be group/world writable" \
   "$TEST_ROOT/config-mode.log"
 chmod 600 "$TEST_REPO/config.toml"
-test ! -e "$TEST_HOME/Library/Application Support/Threadkeep/codex-discord"
+test ! -e "$TEST_HOME/Library/Application Support/Discoparty/codex-discord"
 test ! -e "$TEST_REPO/logs"
 
 env "${COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor \
   >"$TEST_ROOT/install.log"
 
-PLIST="$TEST_HOME/Library/LaunchAgents/com.threadkeep.codex-discord-bridge.plist"
-INSTALLED_CODEX_HOME="$CANONICAL_TEST_HOME/Library/Application Support/Threadkeep/codex-discord/home/.codex"
+PLIST="$TEST_HOME/Library/LaunchAgents/com.discoparty.codex-discord-bridge.plist"
+INSTALLED_CODEX_HOME="$CANONICAL_TEST_HOME/Library/Application Support/Discoparty/codex-discord/home/.codex"
 test -f "$PLIST"
-THREADKEEP_TEST_SECRET_PROBE="$FAKE_BIN/assert-no-secret" \
-  THREADKEEP_TEST_SECRET_PROBE_LOG="$SECRET_PROBE_LOG" \
+DISCOPARTY_TEST_SECRET_PROBE="$FAKE_BIN/assert-no-secret" \
+  DISCOPARTY_TEST_SECRET_PROBE_LOG="$SECRET_PROBE_LOG" \
   "$FAKE_BIN/plutil" -lint "$PLIST" >/dev/null
 grep -Fq "CLAUDE_SENTINEL" "$TEST_REPO/config.toml"
 grep -Fq 'keep_me = "untouched"' "$TEST_REPO/config.toml"
@@ -886,9 +886,9 @@ grep -Fq "shared_skills_root = \"$TEST_ROOT/claude-workspace/x_System/Skills\"" 
   "$TEST_ROOT/claude-workspace/x_System/Skills/triage" ]
 [ "$(readlink "$INSTALLED_CODEX_HOME/skills/skill-finder")" = \
   "$TEST_ROOT/claude-workspace/x_System/Skills/skill-finder" ]
-grep -Fq "state_dir = \"$CANONICAL_TEST_HOME/Library/Application Support/Threadkeep/codex-discord\"" \
+grep -Fq "state_dir = \"$CANONICAL_TEST_HOME/Library/Application Support/Discoparty/codex-discord\"" \
   "$TEST_REPO/config.toml"
-grep -Fq "codex_home = \"$CANONICAL_TEST_HOME/Library/Application Support/Threadkeep/codex-discord/home/.codex\"" \
+grep -Fq "codex_home = \"$CANONICAL_TEST_HOME/Library/Application Support/Discoparty/codex-discord/home/.codex\"" \
   "$TEST_REPO/config.toml"
 grep -Fq "instructions_file = \"$TEST_ROOT/trusted-instructions.md\"" "$TEST_REPO/config.toml"
 grep -Fq 'max_messages_per_minute = 6' "$TEST_REPO/config.toml"
@@ -903,16 +903,16 @@ grep -Fq 'max_database_bytes = 134217728' "$TEST_REPO/config.toml"
 ! grep -Fq 'OPENAI_API_KEY' "$TEST_REPO/config.toml" "$PLIST"
 [ "$(cat "$TEST_HOME/.fake-keychain-discord-bot-token-codex")" = "codex-test-token-without-spaces-123" ]
 [ "$("$REAL_PYTHON" -c 'import os,sys; print(oct(os.stat(sys.argv[1]).st_mode & 0o777))' "$PLIST")" = "0o600" ]
-test ! -e "$TEST_HOME/Library/Application Support/Threadkeep/codex-discord/home/.codex/auth.json"
+test ! -e "$TEST_HOME/Library/Application Support/Discoparty/codex-discord/home/.codex/auth.json"
 grep -Fq 'cli_auth_credentials_store = "keyring"' \
-  "$TEST_HOME/Library/Application Support/Threadkeep/codex-discord/home/.codex/config.toml"
+  "$TEST_HOME/Library/Application Support/Discoparty/codex-discord/home/.codex/config.toml"
 INSTALLED_HOOKS="$INSTALLED_CODEX_HOME/hooks.json"
 test -f "$INSTALLED_HOOKS"
 ! grep -Fq "$TEST_ROOT/claude-workspace" "$INSTALLED_HOOKS"
 grep -Fq '/usr/bin/python3 -I -S' "$INSTALLED_HOOKS"
-grep -Fq -- '--threadkeep-deny-only' "$INSTALLED_HOOKS"
+grep -Fq -- '--discoparty-deny-only' "$INSTALLED_HOOKS"
 "$REAL_PYTHON" - "$INSTALLED_HOOKS" \
-  "$TEST_HOME/Library/Application Support/Threadkeep/codex-discord/hook-runtime" <<'PY'
+  "$TEST_HOME/Library/Application Support/Discoparty/codex-discord/hook-runtime" <<'PY'
 import json
 import os
 import stat
@@ -947,9 +947,9 @@ for path in runtime.iterdir():
     assert not path.is_symlink()
     assert str(path) in "\n".join(commands) or path.name == "manifest.json"
 PY
-test -f "$TEST_HOME/Library/Application Support/Threadkeep/codex-discord/policy/vault-p0.md"
+test -f "$TEST_HOME/Library/Application Support/Discoparty/codex-discord/policy/vault-p0.md"
 grep -Fq 'Source SHA-256:' \
-  "$TEST_HOME/Library/Application Support/Threadkeep/codex-discord/policy/vault-p0.md"
+  "$TEST_HOME/Library/Application Support/Discoparty/codex-discord/policy/vault-p0.md"
 ! grep -Eq '(^| )(bootstrap|bootout|enable|kickstart)( |$)' "$LAUNCHCTL_LOG"
 
 cp "$TEST_REPO/config.toml" "$TEST_ROOT/config-valid-worker-pool.toml"
@@ -965,7 +965,7 @@ if text.count(old) != 1:
 path.write_text(text.replace(old, "max_concurrent_workers = 5", 1))
 PY
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
+  DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor --reinstall \
   >"$TEST_ROOT/worker-pool-range.log" 2>&1; then
   echo "installer accepted max_concurrent_workers outside 1..4" >&2
@@ -978,10 +978,10 @@ chmod 600 "$TEST_REPO/config.toml"
 
 LOG_SWAP_TARGET="$TEST_ROOT/recheck-log-target.log"
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_TEST_PREFLIGHT_LOG_SYMLINK=1 \
-  THREADKEEP_TEST_LOG_SWAP_TARGET="$LOG_SWAP_TARGET" \
-  THREADKEEP_CODEX_CHANNEL_ID=100000000000000009 \
-  THREADKEEP_CODEX_SANDBOX_MODE=workspace-write \
+  DISCOPARTY_TEST_PREFLIGHT_LOG_SYMLINK=1 \
+  DISCOPARTY_TEST_LOG_SWAP_TARGET="$LOG_SWAP_TARGET" \
+  DISCOPARTY_CODEX_CHANNEL_ID=100000000000000009 \
+  DISCOPARTY_CODEX_SANDBOX_MODE=workspace-write \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor --reinstall \
   >"$TEST_ROOT/log-recheck.log" 2>&1; then
   echo "installer accepted a stdout symlink introduced after topology validation" >&2
@@ -995,9 +995,9 @@ grep -Fq 'channel_id = "100000000000000002"' "$TEST_REPO/config.toml"
 grep -Fq 'sandbox_mode = "workspace-write"' "$TEST_REPO/config.toml"
 
 if env "${COMMON_ENV[@]}" \
-  THREADKEEP_TEST_AUTH_SCENARIO=filesystem-artifact \
-  THREADKEEP_CODEX_CHANNEL_ID=100000000000000009 \
-  THREADKEEP_CODEX_SANDBOX_MODE=workspace-write \
+  DISCOPARTY_TEST_AUTH_SCENARIO=filesystem-artifact \
+  DISCOPARTY_CODEX_CHANNEL_ID=100000000000000009 \
+  DISCOPARTY_CODEX_SANDBOX_MODE=workspace-write \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor --reinstall \
   >"$TEST_ROOT/auth-mode.log" 2>&1; then
   echo "installer accepted a filesystem ChatGPT credential artifact" >&2
@@ -1012,29 +1012,29 @@ rm -f "$INSTALLED_CODEX_HOME/auth.json"
 env \
   "HOME=$CANONICAL_TEST_HOME" \
   "PATH=$FAKE_BIN:/usr/bin:/bin:/usr/sbin:/sbin" \
-  "THREADKEEP_TEST_REAL_PYTHON=$REAL_PYTHON" \
-  "THREADKEEP_TEST_EXPECT_REAL_HOME=$CANONICAL_TEST_HOME" \
-  "THREADKEEP_TEST_LAUNCHCTL_LOG=$LAUNCHCTL_LOG" \
-  "THREADKEEP_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret" \
-  "THREADKEEP_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG" \
+  "DISCOPARTY_TEST_REAL_PYTHON=$REAL_PYTHON" \
+  "DISCOPARTY_TEST_EXPECT_REAL_HOME=$CANONICAL_TEST_HOME" \
+  "DISCOPARTY_TEST_LAUNCHCTL_LOG=$LAUNCHCTL_LOG" \
+  "DISCOPARTY_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret" \
+  "DISCOPARTY_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG" \
   "OLD_KEYCHAIN_TOKEN=codex-test-token-without-spaces-123" \
-  "THREADKEEP_TEST_PYTHON_BIN=$FAKE_BIN/python3" \
-  "THREADKEEP_TEST_SECURITY_BIN=$FAKE_BIN/security" \
-  "THREADKEEP_TEST_LAUNCHCTL_BIN=$FAKE_BIN/launchctl" \
-  "THREADKEEP_TEST_PLUTIL_BIN=$FAKE_BIN/plutil" \
-  "THREADKEEP_TEST_UNAME_BIN=$FAKE_BIN/uname" \
-  "THREADKEEP_TEST_SYSCTL_BIN=$FAKE_BIN/sysctl" \
-  "THREADKEEP_REPO_ROOT=$TEST_REPO" \
-  "THREADKEEP_CODEX_BIN=$FAKE_BIN/codex" \
-  "THREADKEEP_CODEX_GUILD_ID=100000000000000001" \
-  "THREADKEEP_CODEX_CHANNEL_ID=100000000000000009" \
-  "THREADKEEP_CODEX_OWNER_USER_ID=100000000000000003" \
-  "THREADKEEP_CODEX_BOT_USER_ID=100000000000000004" \
-  "THREADKEEP_CODEX_APPLICATION_ID=100000000000000005" \
-  "THREADKEEP_CODEX_WORKING_DIRECTORY=$WORK_DIR" \
-  "THREADKEEP_CODEX_CHANNEL_TRUST=public" \
-  "THREADKEEP_CODEX_SANDBOX_MODE=danger-full-access" \
-  "THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED" \
+  "DISCOPARTY_TEST_PYTHON_BIN=$FAKE_BIN/python3" \
+  "DISCOPARTY_TEST_SECURITY_BIN=$FAKE_BIN/security" \
+  "DISCOPARTY_TEST_LAUNCHCTL_BIN=$FAKE_BIN/launchctl" \
+  "DISCOPARTY_TEST_PLUTIL_BIN=$FAKE_BIN/plutil" \
+  "DISCOPARTY_TEST_UNAME_BIN=$FAKE_BIN/uname" \
+  "DISCOPARTY_TEST_SYSCTL_BIN=$FAKE_BIN/sysctl" \
+  "DISCOPARTY_REPO_ROOT=$TEST_REPO" \
+  "DISCOPARTY_CODEX_BIN=$FAKE_BIN/codex" \
+  "DISCOPARTY_CODEX_GUILD_ID=100000000000000001" \
+  "DISCOPARTY_CODEX_CHANNEL_ID=100000000000000009" \
+  "DISCOPARTY_CODEX_OWNER_USER_ID=100000000000000003" \
+  "DISCOPARTY_CODEX_BOT_USER_ID=100000000000000004" \
+  "DISCOPARTY_CODEX_APPLICATION_ID=100000000000000005" \
+  "DISCOPARTY_CODEX_WORKING_DIRECTORY=$WORK_DIR" \
+  "DISCOPARTY_CODEX_CHANNEL_TRUST=public" \
+  "DISCOPARTY_CODEX_SANDBOX_MODE=danger-full-access" \
+  "DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED=FULL_COMPUTER_ACCESS_ACCEPTED" \
   "$TEST_REPO/install-codex.sh" --scratch --non-interactive --no-monitor --reinstall \
   >"$TEST_ROOT/public-full-access.log"
 
@@ -1059,15 +1059,15 @@ sed -n '/^\[codex\]$/,$p' "$TEST_REPO/config.toml" > "$TEST_ROOT/codex-before-cl
 CLAUDE_COMMON_ENV=(
   "HOME=$CANONICAL_TEST_HOME"
   "PATH=$FAKE_BIN:/usr/bin:/bin:/usr/sbin:/sbin"
-  "THREADKEEP_TEST_REAL_PYTHON=$REAL_PYTHON"
-  "THREADKEEP_TEST_LAUNCHCTL_LOG=$LAUNCHCTL_LOG"
-  "THREADKEEP_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret"
-  "THREADKEEP_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG"
-  "THREADKEEP_TEST_CLAUDE_BIN=$FAKE_BIN/claude"
-  "THREADKEEP_TEST_BUN_BIN=$FAKE_BIN/bun"
-  "THREADKEEP_CLAUDE_FULL_AUTHORITY=1"
+  "DISCOPARTY_TEST_REAL_PYTHON=$REAL_PYTHON"
+  "DISCOPARTY_TEST_LAUNCHCTL_LOG=$LAUNCHCTL_LOG"
+  "DISCOPARTY_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret"
+  "DISCOPARTY_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG"
+  "DISCOPARTY_TEST_CLAUDE_BIN=$FAKE_BIN/claude"
+  "DISCOPARTY_TEST_BUN_BIN=$FAKE_BIN/bun"
+  "DISCOPARTY_CLAUDE_FULL_AUTHORITY=1"
   "REPO_ROOT=$TEST_REPO"
-  "THREADKEEP_TIMEZONE=America/New_York"
+  "DISCOPARTY_TIMEZONE=America/New_York"
 )
 
 CLAUDE_REJECTED_WORKSPACE="$TEST_ROOT/claude-rejected-workspace"
@@ -1076,9 +1076,9 @@ touch "$TEST_HOME/Library/LaunchAgents/com.thesystem.discord-gateway-client.plis
 if env "${CLAUDE_COMMON_ENV[@]}" \
   "DISCORD_BOT_TOKEN=claude-token" \
   "WORKSPACE_ROOT=$CLAUDE_REJECTED_WORKSPACE" \
-  "THREADKEEP_LISTEN_CHANNEL_ID=200000000000000011" \
-  "THREADKEEP_ERRORS_CHANNEL_ID=200000000000000012" \
-  "THREADKEEP_OWNER_USER_ID=200000000000000013" \
+  "DISCOPARTY_LISTEN_CHANNEL_ID=200000000000000011" \
+  "DISCOPARTY_ERRORS_CHANNEL_ID=200000000000000012" \
+  "DISCOPARTY_OWNER_USER_ID=200000000000000013" \
   "$TEST_REPO/install.sh" --scratch --non-interactive --reinstall \
   >"$TEST_ROOT/claude-legacy-plist.log" 2>&1; then
   echo "Claude installer accepted a legacy com.thesystem gateway plist" >&2
@@ -1092,12 +1092,12 @@ test ! -e "$CLAUDE_REJECTED_WORKSPACE"
 test ! -e "$TEST_HOME/.fake-keychain-discord-bot-token"
 
 if env "${CLAUDE_COMMON_ENV[@]}" \
-  "THREADKEEP_TEST_LEGACY_TMUX=1" \
+  "DISCOPARTY_TEST_LEGACY_TMUX=1" \
   "DISCORD_BOT_TOKEN=claude-token" \
   "WORKSPACE_ROOT=$CLAUDE_REJECTED_WORKSPACE" \
-  "THREADKEEP_LISTEN_CHANNEL_ID=200000000000000011" \
-  "THREADKEEP_ERRORS_CHANNEL_ID=200000000000000012" \
-  "THREADKEEP_OWNER_USER_ID=200000000000000013" \
+  "DISCOPARTY_LISTEN_CHANNEL_ID=200000000000000011" \
+  "DISCOPARTY_ERRORS_CHANNEL_ID=200000000000000012" \
+  "DISCOPARTY_OWNER_USER_ID=200000000000000013" \
   "$TEST_REPO/install.sh" --scratch --non-interactive --reinstall \
   >"$TEST_ROOT/claude-legacy-tmux.log" 2>&1; then
   echo "Claude installer accepted the legacy cx-chat tmux listener" >&2
@@ -1111,14 +1111,14 @@ test ! -e "$TEST_HOME/.fake-keychain-discord-bot-token"
 LEGACY_CLAUDE_STATE="$TEST_ROOT/legacy-claude.launch-state"
 printf '%s\n' loaded > "$LEGACY_CLAUDE_STATE"
 if env "${CLAUDE_COMMON_ENV[@]}" \
-  "THREADKEEP_TEST_LAUNCHCTL_SCENARIO=stateful" \
-  "THREADKEEP_TEST_LAUNCHCTL_STATE=$LEGACY_CLAUDE_STATE" \
-  "THREADKEEP_TEST_LAUNCHCTL_LOADED_LABEL=com.thesystem.discord-gateway-client" \
+  "DISCOPARTY_TEST_LAUNCHCTL_SCENARIO=stateful" \
+  "DISCOPARTY_TEST_LAUNCHCTL_STATE=$LEGACY_CLAUDE_STATE" \
+  "DISCOPARTY_TEST_LAUNCHCTL_LOADED_LABEL=com.thesystem.discord-gateway-client" \
   "DISCORD_BOT_TOKEN=claude-token" \
   "WORKSPACE_ROOT=$CLAUDE_REJECTED_WORKSPACE" \
-  "THREADKEEP_LISTEN_CHANNEL_ID=200000000000000011" \
-  "THREADKEEP_ERRORS_CHANNEL_ID=200000000000000012" \
-  "THREADKEEP_OWNER_USER_ID=200000000000000013" \
+  "DISCOPARTY_LISTEN_CHANNEL_ID=200000000000000011" \
+  "DISCOPARTY_ERRORS_CHANNEL_ID=200000000000000012" \
+  "DISCOPARTY_OWNER_USER_ID=200000000000000013" \
   "$TEST_REPO/install.sh" --scratch --non-interactive --reinstall \
   >"$TEST_ROOT/claude-legacy-loaded.log" 2>&1; then
   echo "Claude installer accepted a loaded legacy gateway without a plist" >&2
@@ -1133,9 +1133,9 @@ test ! -e "$TEST_HOME/.fake-keychain-discord-bot-token"
 if env "${CLAUDE_COMMON_ENV[@]}" \
   "DISCORD_BOT_TOKEN=claude-token" \
   "WORKSPACE_ROOT=$CLAUDE_REJECTED_WORKSPACE" \
-  "THREADKEEP_LISTEN_CHANNEL_ID=100000000000000009" \
-  "THREADKEEP_ERRORS_CHANNEL_ID=200000000000000012" \
-  "THREADKEEP_OWNER_USER_ID=200000000000000013" \
+  "DISCOPARTY_LISTEN_CHANNEL_ID=100000000000000009" \
+  "DISCOPARTY_ERRORS_CHANNEL_ID=200000000000000012" \
+  "DISCOPARTY_OWNER_USER_ID=200000000000000013" \
   "$TEST_REPO/install.sh" --scratch --non-interactive --reinstall \
   >"$TEST_ROOT/claude-shared-channel.log" 2>&1; then
   echo "Claude installer accepted the configured Codex channel" >&2
@@ -1157,7 +1157,7 @@ from pathlib import Path
 path = Path(sys.argv[1])
 text = path.read_text()
 old = (
-    'keychain_service = "threadkeep-secret"\n'
+    'keychain_service = "discoparty-secret"\n'
     'keychain_account = "discord-bot-token-codex"'
 )
 new = (
@@ -1175,9 +1175,9 @@ cp "$TEST_REPO/config.toml" "$TEST_ROOT/config-custom-keychain-before-reject.tom
 if env "${CLAUDE_COMMON_ENV[@]}" \
   "DISCORD_BOT_TOKEN=codex-test-token-without-spaces-123" \
   "WORKSPACE_ROOT=$CLAUDE_REJECTED_WORKSPACE" \
-  "THREADKEEP_LISTEN_CHANNEL_ID=200000000000000011" \
-  "THREADKEEP_ERRORS_CHANNEL_ID=200000000000000012" \
-  "THREADKEEP_OWNER_USER_ID=200000000000000013" \
+  "DISCOPARTY_LISTEN_CHANNEL_ID=200000000000000011" \
+  "DISCOPARTY_ERRORS_CHANNEL_ID=200000000000000012" \
+  "DISCOPARTY_OWNER_USER_ID=200000000000000013" \
   "$TEST_REPO/install.sh" --scratch --non-interactive --reinstall \
   >"$TEST_ROOT/claude-shared-token.log" 2>&1; then
   echo "Claude installer accepted the configured Codex bot token" >&2
@@ -1195,24 +1195,24 @@ cp "$TEST_ROOT/config-before-custom-codex-keychain.toml" "$TEST_REPO/config.toml
 chmod 600 "$TEST_REPO/config.toml"
 
 STALE_MARKER_STATE="$TEST_ROOT/stale-marker.launch-state"
-STALE_MARKER_PLIST="$TEST_HOME/Library/LaunchAgents/com.threadkeep.discord-marker-watcher.plist"
+STALE_MARKER_PLIST="$TEST_HOME/Library/LaunchAgents/com.discoparty.discord-marker-watcher.plist"
 printf '%s\n' loaded > "$STALE_MARKER_STATE"
 touch "$STALE_MARKER_PLIST"
 cp "$TEST_REPO/config.toml" "$TEST_ROOT/config-before-marker-bootout-failure.toml"
 if env "${CLAUDE_COMMON_ENV[@]}" \
-  "THREADKEEP_TEST_LAUNCHCTL_SCENARIO=loaded-bootout-fails" \
-  "THREADKEEP_TEST_LAUNCHCTL_LOADED_LABEL=com.threadkeep.discord-marker-watcher" \
+  "DISCOPARTY_TEST_LAUNCHCTL_SCENARIO=loaded-bootout-fails" \
+  "DISCOPARTY_TEST_LAUNCHCTL_LOADED_LABEL=com.discoparty.discord-marker-watcher" \
   "DISCORD_BOT_TOKEN=claude-token" \
   "WORKSPACE_ROOT=$CLAUDE_REJECTED_WORKSPACE" \
-  "THREADKEEP_LISTEN_CHANNEL_ID=200000000000000011" \
-  "THREADKEEP_ERRORS_CHANNEL_ID=200000000000000012" \
-  "THREADKEEP_OWNER_USER_ID=200000000000000013" \
+  "DISCOPARTY_LISTEN_CHANNEL_ID=200000000000000011" \
+  "DISCOPARTY_ERRORS_CHANNEL_ID=200000000000000012" \
+  "DISCOPARTY_OWNER_USER_ID=200000000000000013" \
   "$TEST_REPO/install.sh" --scratch --non-interactive --reinstall \
   >"$TEST_ROOT/claude-marker-bootout-failure.log" 2>&1; then
   echo "Claude installer continued after stale marker watcher bootout failed" >&2
   exit 1
 fi
-grep -Fq "Could not unload obsolete com.threadkeep.discord-marker-watcher" \
+grep -Fq "Could not unload obsolete com.discoparty.discord-marker-watcher" \
   "$TEST_ROOT/claude-marker-bootout-failure.log"
 cmp "$TEST_ROOT/config-before-marker-bootout-failure.toml" "$TEST_REPO/config.toml"
 test -f "$STALE_MARKER_PLIST"
@@ -1225,14 +1225,14 @@ cp \
   "$TEST_ROOT/claude-reinstall-workspace/CLAUDE.md"
 
 env "${CLAUDE_COMMON_ENV[@]}" \
-  "THREADKEEP_TEST_LAUNCHCTL_SCENARIO=stateful" \
-  "THREADKEEP_TEST_LAUNCHCTL_STATE=$STALE_MARKER_STATE" \
-  "THREADKEEP_TEST_LAUNCHCTL_LOADED_LABEL=com.threadkeep.discord-marker-watcher" \
+  "DISCOPARTY_TEST_LAUNCHCTL_SCENARIO=stateful" \
+  "DISCOPARTY_TEST_LAUNCHCTL_STATE=$STALE_MARKER_STATE" \
+  "DISCOPARTY_TEST_LAUNCHCTL_LOADED_LABEL=com.discoparty.discord-marker-watcher" \
   "DISCORD_BOT_TOKEN=claude-token" \
   "WORKSPACE_ROOT=$TEST_ROOT/claude-reinstall-workspace" \
-  "THREADKEEP_LISTEN_CHANNEL_ID=200000000000000011" \
-  "THREADKEEP_ERRORS_CHANNEL_ID=200000000000000012" \
-  "THREADKEEP_OWNER_USER_ID=200000000000000013" \
+  "DISCOPARTY_LISTEN_CHANNEL_ID=200000000000000011" \
+  "DISCOPARTY_ERRORS_CHANNEL_ID=200000000000000012" \
+  "DISCOPARTY_OWNER_USER_ID=200000000000000013" \
   "$TEST_REPO/install.sh" --scratch --non-interactive --reinstall \
   >"$TEST_ROOT/claude-reinstall.log"
 [ "$(cat "$STALE_MARKER_STATE")" = "unloaded" ]
@@ -1256,14 +1256,14 @@ grep -Fq 'application_id = "200000000000000022"' "$TEST_REPO/config.toml"
 RUNNING_CODEX_STATE="$TEST_ROOT/claude-running-codex.launch-state"
 printf '%s\n' loaded > "$RUNNING_CODEX_STATE"
 env "${CLAUDE_COMMON_ENV[@]}" \
-  "THREADKEEP_TEST_LAUNCHCTL_SCENARIO=stateful" \
-  "THREADKEEP_TEST_LAUNCHCTL_STATE=$RUNNING_CODEX_STATE" \
-  "THREADKEEP_TEST_LAUNCHCTL_LOADED_LABEL=com.threadkeep.codex-discord-bridge" \
+  "DISCOPARTY_TEST_LAUNCHCTL_SCENARIO=stateful" \
+  "DISCOPARTY_TEST_LAUNCHCTL_STATE=$RUNNING_CODEX_STATE" \
+  "DISCOPARTY_TEST_LAUNCHCTL_LOADED_LABEL=com.discoparty.codex-discord-bridge" \
   "DISCORD_BOT_TOKEN=claude-token" \
   "WORKSPACE_ROOT=$TEST_ROOT/claude-reinstall-workspace" \
-  "THREADKEEP_LISTEN_CHANNEL_ID=200000000000000011" \
-  "THREADKEEP_ERRORS_CHANNEL_ID=200000000000000012" \
-  "THREADKEEP_OWNER_USER_ID=200000000000000013" \
+  "DISCOPARTY_LISTEN_CHANNEL_ID=200000000000000011" \
+  "DISCOPARTY_ERRORS_CHANNEL_ID=200000000000000012" \
+  "DISCOPARTY_OWNER_USER_ID=200000000000000013" \
   "$TEST_REPO/install.sh" --scratch --non-interactive --reinstall \
   >"$TEST_ROOT/claude-running-codex-unchanged.log"
 
@@ -1273,14 +1273,14 @@ cp \
   "$TEST_ROOT/claude-keychain-before-running-codex-reject"
 RUNNING_REJECTED_WORKSPACE="$TEST_ROOT/claude-running-codex-rejected-workspace"
 if env "${CLAUDE_COMMON_ENV[@]}" \
-  "THREADKEEP_TEST_LAUNCHCTL_SCENARIO=stateful" \
-  "THREADKEEP_TEST_LAUNCHCTL_STATE=$RUNNING_CODEX_STATE" \
-  "THREADKEEP_TEST_LAUNCHCTL_LOADED_LABEL=com.threadkeep.codex-discord-bridge" \
+  "DISCOPARTY_TEST_LAUNCHCTL_SCENARIO=stateful" \
+  "DISCOPARTY_TEST_LAUNCHCTL_STATE=$RUNNING_CODEX_STATE" \
+  "DISCOPARTY_TEST_LAUNCHCTL_LOADED_LABEL=com.discoparty.codex-discord-bridge" \
   "DISCORD_BOT_TOKEN=claude-token" \
   "WORKSPACE_ROOT=$RUNNING_REJECTED_WORKSPACE" \
-  "THREADKEEP_LISTEN_CHANNEL_ID=200000000000000019" \
-  "THREADKEEP_ERRORS_CHANNEL_ID=200000000000000012" \
-  "THREADKEEP_OWNER_USER_ID=200000000000000013" \
+  "DISCOPARTY_LISTEN_CHANNEL_ID=200000000000000019" \
+  "DISCOPARTY_ERRORS_CHANNEL_ID=200000000000000012" \
+  "DISCOPARTY_OWNER_USER_ID=200000000000000013" \
   "$TEST_REPO/install.sh" --scratch --non-interactive --reinstall \
   >"$TEST_ROOT/claude-running-codex-changed.log" 2>&1; then
   echo "Claude installer changed routing while the Codex provider was running" >&2
@@ -1309,9 +1309,9 @@ LEGACY_TEST_HOME="$LEGACY_TEST_ROOT/home"
 LEGACY_TEST_REPO="$LEGACY_TEST_HOME/TheSystem/x_System/Assistant/codex-discord-bridge"
 LEGACY_TEST_PLIST="$LEGACY_TEST_HOME/Library/LaunchAgents/com.thesystem.codex-discord-bridge.plist"
 LEGACY_TEST_STATE="$LEGACY_TEST_HOME/Library/Application Support/thesystem/codex-discord"
-LEGACY_NEW_STATE="$LEGACY_TEST_HOME/Library/Application Support/Threadkeep/codex-discord"
+LEGACY_NEW_STATE="$LEGACY_TEST_HOME/Library/Application Support/Discoparty/codex-discord"
 LEGACY_LAUNCH_STATE="$LEGACY_TEST_ROOT/legacy.launch-state"
-LEGACY_NEW_LAUNCH_STATE="$LEGACY_TEST_ROOT/threadkeep.launch-state"
+LEGACY_NEW_LAUNCH_STATE="$LEGACY_TEST_ROOT/discoparty.launch-state"
 LEGACY_DISABLED_STATE="$LEGACY_TEST_ROOT/legacy.disabled"
 LEGACY_ORDER="$LEGACY_TEST_ROOT/order.log"
 LEGACY_STATE_TRANSITIONS="$LEGACY_TEST_ROOT/state-transitions.log"
@@ -1325,11 +1325,11 @@ create_legacy_fixture() {
   local job_state="${2:-completed}"
   rm -rf \
     "$LEGACY_TEST_HOME/Library/Application Support/thesystem" \
-    "$LEGACY_TEST_HOME/Library/Application Support/Threadkeep" \
+    "$LEGACY_TEST_HOME/Library/Application Support/Discoparty" \
     "$LEGACY_TEST_REPO"
   rm -f \
     "$LEGACY_TEST_PLIST" \
-    "$LEGACY_TEST_HOME/Library/LaunchAgents/com.threadkeep.codex-discord-bridge.plist" \
+    "$LEGACY_TEST_HOME/Library/LaunchAgents/com.discoparty.codex-discord-bridge.plist" \
     "$LEGACY_DISABLED_STATE" \
     "$LEGACY_TEST_HOME/.fake-keychain-discord-bot-token-codex" \
     "$LEGACY_TEST_HOME/.fake-keychain-thesystem-discord-bot-token-admin" \
@@ -1455,55 +1455,55 @@ LEGACY_FAKE_LAUNCHCTL="$LEGACY_TEST_ROOT/launchctl"
 cat > "$LEGACY_FAKE_LAUNCHCTL" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-"${THREADKEEP_TEST_SECRET_PROBE:?}" "$0" "$@"
-printf 'launchctl %s\n' "$*" >> "$THREADKEEP_TEST_INSTALL_ORDER_LOG"
+"${DISCOPARTY_TEST_SECRET_PROBE:?}" "$0" "$@"
+printf 'launchctl %s\n' "$*" >> "$DISCOPARTY_TEST_INSTALL_ORDER_LOG"
 command_name="${1:-}"
 target="${2:-}"
 case "$command_name" in
   print)
     case "$target" in
       */com.thesystem.codex-discord-bridge)
-        [ "$(cat "$THREADKEEP_TEST_LEGACY_LAUNCH_STATE")" = "loaded" ] || exit 1
-        printf '    pid = %s\n' "${THREADKEEP_TEST_LEGACY_PID:-999999}"
+        [ "$(cat "$DISCOPARTY_TEST_LEGACY_LAUNCH_STATE")" = "loaded" ] || exit 1
+        printf '    pid = %s\n' "${DISCOPARTY_TEST_LEGACY_PID:-999999}"
         ;;
-      */com.threadkeep.codex-discord-bridge)
-        [ "$(cat "$THREADKEEP_TEST_NEW_LAUNCH_STATE")" = "loaded" ]
+      */com.discoparty.codex-discord-bridge)
+        [ "$(cat "$DISCOPARTY_TEST_NEW_LAUNCH_STATE")" = "loaded" ]
         ;;
       *) exit 1 ;;
     esac
     ;;
   print-disabled)
-    if [ -e "$THREADKEEP_TEST_LEGACY_DISABLED_STATE" ]; then
+    if [ -e "$DISCOPARTY_TEST_LEGACY_DISABLED_STATE" ]; then
       printf '"com.thesystem.codex-discord-bridge" => true\n'
     fi
     ;;
   bootout)
     case "$target" in
       */com.thesystem.codex-discord-bridge)
-        [ "$(cat "$THREADKEEP_TEST_LEGACY_LAUNCH_STATE")" = "loaded" ] || exit 93
-        printf '%s\n' unloaded > "$THREADKEEP_TEST_LEGACY_LAUNCH_STATE"
+        [ "$(cat "$DISCOPARTY_TEST_LEGACY_LAUNCH_STATE")" = "loaded" ] || exit 93
+        printf '%s\n' unloaded > "$DISCOPARTY_TEST_LEGACY_LAUNCH_STATE"
         ;;
-      */com.threadkeep.codex-discord-bridge)
-        [ "$(cat "$THREADKEEP_TEST_NEW_LAUNCH_STATE")" = "loaded" ] || exit 93
-        printf '%s\n' unloaded > "$THREADKEEP_TEST_NEW_LAUNCH_STATE"
+      */com.discoparty.codex-discord-bridge)
+        [ "$(cat "$DISCOPARTY_TEST_NEW_LAUNCH_STATE")" = "loaded" ] || exit 93
+        printf '%s\n' unloaded > "$DISCOPARTY_TEST_NEW_LAUNCH_STATE"
         ;;
       *) exit 2 ;;
     esac
     ;;
   disable)
-    : > "$THREADKEEP_TEST_LEGACY_DISABLED_STATE"
+    : > "$DISCOPARTY_TEST_LEGACY_DISABLED_STATE"
     ;;
   enable)
-    rm -f "$THREADKEEP_TEST_LEGACY_DISABLED_STATE"
+    rm -f "$DISCOPARTY_TEST_LEGACY_DISABLED_STATE"
     ;;
   bootstrap)
     plist_path="${3:-}"
     case "${plist_path##*/}" in
       com.thesystem.codex-discord-bridge.plist)
-        printf '%s\n' loaded > "$THREADKEEP_TEST_LEGACY_LAUNCH_STATE"
+        printf '%s\n' loaded > "$DISCOPARTY_TEST_LEGACY_LAUNCH_STATE"
         ;;
-      com.threadkeep.codex-discord-bridge.plist)
-        printf '%s\n' loaded > "$THREADKEEP_TEST_NEW_LAUNCH_STATE"
+      com.discoparty.codex-discord-bridge.plist)
+        printf '%s\n' loaded > "$DISCOPARTY_TEST_NEW_LAUNCH_STATE"
         ;;
       *) exit 2 ;;
     esac
@@ -1528,28 +1528,28 @@ START_MONITOR=0
 check_no_api_key() { :; }
 check_prerequisites() { :; }
 resolve_settings() {
-  PYTHON_BIN="$THREADKEEP_TEST_REAL_PYTHON"
-  SECURITY_BIN="$THREADKEEP_TEST_SECURITY_BIN"
-  LAUNCHCTL_BIN="$THREADKEEP_TEST_LAUNCHCTL_BIN"
-  REPO_ROOT="$THREADKEEP_TEST_REPO"
-  CONFIG_PATH="$THREADKEEP_TEST_LEGACY_HOME/threadkeep-config.toml"
-  PLIST_PATH="$THREADKEEP_TEST_LEGACY_HOME/Library/LaunchAgents/com.threadkeep.codex-discord-bridge.plist"
-  STATE_DIR="$THREADKEEP_TEST_NEW_STATE"
-  LOG_DIR="$THREADKEEP_TEST_REPO/logs"
+  PYTHON_BIN="$DISCOPARTY_TEST_REAL_PYTHON"
+  SECURITY_BIN="$DISCOPARTY_TEST_SECURITY_BIN"
+  LAUNCHCTL_BIN="$DISCOPARTY_TEST_LAUNCHCTL_BIN"
+  REPO_ROOT="$DISCOPARTY_TEST_REPO"
+  CONFIG_PATH="$DISCOPARTY_TEST_LEGACY_HOME/discoparty-config.toml"
+  PLIST_PATH="$DISCOPARTY_TEST_LEGACY_HOME/Library/LaunchAgents/com.discoparty.codex-discord-bridge.plist"
+  STATE_DIR="$DISCOPARTY_TEST_NEW_STATE"
+  LOG_DIR="$DISCOPARTY_TEST_REPO/logs"
   WORKER_HOME="$STATE_DIR/home"
   CODEX_HOME_DIR="$WORKER_HOME/.codex"
-  SHARED_SKILLS_ROOT="$THREADKEEP_TEST_SHARED_SKILLS_ROOT"
-  THREADKEEP_CODEX_GUILD_ID=100000000000000001
-  THREADKEEP_CODEX_CHANNEL_ID=100000000000000002
-  THREADKEEP_CODEX_OWNER_USER_ID=100000000000000003
-  THREADKEEP_CODEX_BOT_USER_ID=100000000000000004
-  THREADKEEP_CODEX_APPLICATION_ID=100000000000000005
-  THREADKEEP_CODEX_WORKING_DIRECTORY="$THREADKEEP_TEST_WORK_DIR"
-  THREADKEEP_CODEX_SANDBOX_MODE=danger-full-access
+  SHARED_SKILLS_ROOT="$DISCOPARTY_TEST_SHARED_SKILLS_ROOT"
+  DISCOPARTY_CODEX_GUILD_ID=100000000000000001
+  DISCOPARTY_CODEX_CHANNEL_ID=100000000000000002
+  DISCOPARTY_CODEX_OWNER_USER_ID=100000000000000003
+  DISCOPARTY_CODEX_BOT_USER_ID=100000000000000004
+  DISCOPARTY_CODEX_APPLICATION_ID=100000000000000005
+  DISCOPARTY_CODEX_WORKING_DIRECTORY="$DISCOPARTY_TEST_WORK_DIR"
+  DISCOPARTY_CODEX_SANDBOX_MODE=danger-full-access
   TOPOLOGY_VALIDATED=1
 }
 legacy_stage() {
-  printf '%s\n' "$1" >> "$THREADKEEP_TEST_INSTALL_ORDER_LOG"
+  printf '%s\n' "$1" >> "$DISCOPARTY_TEST_INSTALL_ORDER_LOG"
 }
 prepare_log_directory() {
   legacy_stage stage-log-directory
@@ -1574,14 +1574,14 @@ verify_legacy_descendants_stopped() {
   LEGACY_DESCENDANTS_DRAINED=1
   return 0
 }
-current_policy_binding() { printf '%s\n' "$THREADKEEP_TEST_POLICY_BINDING"; }
+current_policy_binding() { printf '%s\n' "$DISCOPARTY_TEST_POLICY_BINDING"; }
 write_legacy_handoff_state() {
-  printf '%s\n' "$1" >> "$THREADKEEP_TEST_STATE_TRANSITIONS"
+  printf '%s\n' "$1" >> "$DISCOPARTY_TEST_STATE_TRANSITIONS"
   production_write_legacy_handoff_state "$@"
 }
 bootstrap_agent() {
-  [ "$(cat "$THREADKEEP_TEST_LEGACY_LAUNCH_STATE")" = "unloaded" ]
-  [ -e "$THREADKEEP_TEST_LEGACY_DISABLED_STATE" ]
+  [ "$(cat "$DISCOPARTY_TEST_LEGACY_LAUNCH_STATE")" = "unloaded" ]
+  [ -e "$DISCOPARTY_TEST_LEGACY_DISABLED_STATE" ]
   legacy_stage replacement-bootstrap
 }
 start_monitor() { :; }
@@ -1589,24 +1589,24 @@ EOF
 
 LEGACY_COMMON_ENV=(
   "HOME=$LEGACY_TEST_HOME"
-  "THREADKEEP_TEST_SOURCEABLE_INSTALLER=$SOURCEABLE_INSTALLER"
-  "THREADKEEP_TEST_DRIVER_COMMON=$LEGACY_DRIVER_COMMON"
-  "THREADKEEP_TEST_REAL_PYTHON=$REAL_PYTHON"
-  "THREADKEEP_TEST_SECURITY_BIN=$FAKE_BIN/security"
-  "THREADKEEP_TEST_LAUNCHCTL_BIN=$LEGACY_FAKE_LAUNCHCTL"
-  "THREADKEEP_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret"
-  "THREADKEEP_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG"
-  "THREADKEEP_TEST_REPO=$TEST_REPO"
-  "THREADKEEP_TEST_LEGACY_HOME=$LEGACY_TEST_HOME"
-  "THREADKEEP_TEST_NEW_STATE=$LEGACY_NEW_STATE"
-  "THREADKEEP_TEST_WORK_DIR=$WORK_DIR"
-  "THREADKEEP_TEST_SHARED_SKILLS_ROOT=$TEST_ROOT/claude-workspace/x_System/Skills"
-  "THREADKEEP_TEST_INSTALL_ORDER_LOG=$LEGACY_ORDER"
-  "THREADKEEP_TEST_STATE_TRANSITIONS=$LEGACY_STATE_TRANSITIONS"
-  "THREADKEEP_TEST_LEGACY_LAUNCH_STATE=$LEGACY_LAUNCH_STATE"
-  "THREADKEEP_TEST_NEW_LAUNCH_STATE=$LEGACY_NEW_LAUNCH_STATE"
-  "THREADKEEP_TEST_LEGACY_DISABLED_STATE=$LEGACY_DISABLED_STATE"
-  "THREADKEEP_TEST_POLICY_BINDING=$LEGACY_POLICY_BINDING"
+  "DISCOPARTY_TEST_SOURCEABLE_INSTALLER=$SOURCEABLE_INSTALLER"
+  "DISCOPARTY_TEST_DRIVER_COMMON=$LEGACY_DRIVER_COMMON"
+  "DISCOPARTY_TEST_REAL_PYTHON=$REAL_PYTHON"
+  "DISCOPARTY_TEST_SECURITY_BIN=$FAKE_BIN/security"
+  "DISCOPARTY_TEST_LAUNCHCTL_BIN=$LEGACY_FAKE_LAUNCHCTL"
+  "DISCOPARTY_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret"
+  "DISCOPARTY_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG"
+  "DISCOPARTY_TEST_REPO=$TEST_REPO"
+  "DISCOPARTY_TEST_LEGACY_HOME=$LEGACY_TEST_HOME"
+  "DISCOPARTY_TEST_NEW_STATE=$LEGACY_NEW_STATE"
+  "DISCOPARTY_TEST_WORK_DIR=$WORK_DIR"
+  "DISCOPARTY_TEST_SHARED_SKILLS_ROOT=$TEST_ROOT/claude-workspace/x_System/Skills"
+  "DISCOPARTY_TEST_INSTALL_ORDER_LOG=$LEGACY_ORDER"
+  "DISCOPARTY_TEST_STATE_TRANSITIONS=$LEGACY_STATE_TRANSITIONS"
+  "DISCOPARTY_TEST_LEGACY_LAUNCH_STATE=$LEGACY_LAUNCH_STATE"
+  "DISCOPARTY_TEST_NEW_LAUNCH_STATE=$LEGACY_NEW_LAUNCH_STATE"
+  "DISCOPARTY_TEST_LEGACY_DISABLED_STATE=$LEGACY_DISABLED_STATE"
+  "DISCOPARTY_TEST_POLICY_BINDING=$LEGACY_POLICY_BINDING"
 )
 
 # A legacy footprint blocks an ordinary installation before any staged
@@ -1615,19 +1615,19 @@ create_legacy_fixture public completed
 cat > "$LEGACY_TEST_ROOT/dual-run-driver.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-source "$THREADKEEP_TEST_SOURCEABLE_INSTALLER"
-source "$THREADKEEP_TEST_DRIVER_COMMON"
+source "$DISCOPARTY_TEST_SOURCEABLE_INSTALLER"
+source "$DISCOPARTY_TEST_DRIVER_COMMON"
 TAKE_OVER_LEGACY=0
 IMPORT_LEGACY_TOKEN=0
 prepare_log_directory() {
-  : > "$THREADKEEP_TEST_MUTATION_MARKER"
+  : > "$DISCOPARTY_TEST_MUTATION_MARKER"
   return 97
 }
 main
 EOF
 chmod 700 "$LEGACY_TEST_ROOT/dual-run-driver.sh"
 if env "${LEGACY_COMMON_ENV[@]}" \
-  "THREADKEEP_TEST_MUTATION_MARKER=$LEGACY_MUTATION_MARKER" \
+  "DISCOPARTY_TEST_MUTATION_MARKER=$LEGACY_MUTATION_MARKER" \
   "$LEGACY_TEST_ROOT/dual-run-driver.sh" \
   >"$TEST_ROOT/legacy-dual-run.log" 2>&1; then
   echo "ordinary install accepted a legacy Codex provider" >&2
@@ -1644,8 +1644,8 @@ create_legacy_fixture owner_private completed
 cat > "$LEGACY_TEST_ROOT/invalid-plist-driver.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-source "$THREADKEEP_TEST_SOURCEABLE_INSTALLER"
-source "$THREADKEEP_TEST_DRIVER_COMMON"
+source "$DISCOPARTY_TEST_SOURCEABLE_INSTALLER"
+source "$DISCOPARTY_TEST_DRIVER_COMMON"
 TAKE_OVER_LEGACY=1
 IMPORT_LEGACY_TOKEN=0
 main
@@ -1669,8 +1669,8 @@ create_legacy_fixture public completed
 cat > "$LEGACY_TEST_ROOT/scratch-driver.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-source "$THREADKEEP_TEST_SOURCEABLE_INSTALLER"
-source "$THREADKEEP_TEST_DRIVER_COMMON"
+source "$DISCOPARTY_TEST_SOURCEABLE_INSTALLER"
+source "$DISCOPARTY_TEST_DRIVER_COMMON"
 SCRATCH=1
 TAKE_OVER_LEGACY=1
 IMPORT_LEGACY_TOKEN=1
@@ -1692,7 +1692,7 @@ env "${LEGACY_COMMON_ENV[@]}" \
   "$LEGACY_TEST_ROOT/scratch-driver.sh" \
   >"$TEST_ROOT/legacy-scratch.log"
 grep -Fq "rendered replacement plist was removed" "$TEST_ROOT/legacy-scratch.log"
-test ! -e "$LEGACY_TEST_HOME/Library/LaunchAgents/com.threadkeep.codex-discord-bridge.plist"
+test ! -e "$LEGACY_TEST_HOME/Library/LaunchAgents/com.discoparty.codex-discord-bridge.plist"
 [ "$(cat "$LEGACY_LAUNCH_STATE")" = "loaded" ]
 test ! -e "$LEGACY_DISABLED_STATE"
 
@@ -1703,15 +1703,15 @@ create_legacy_fixture public completed
 cat > "$LEGACY_TEST_ROOT/success-driver.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-source "$THREADKEEP_TEST_SOURCEABLE_INSTALLER"
-source "$THREADKEEP_TEST_DRIVER_COMMON"
+source "$DISCOPARTY_TEST_SOURCEABLE_INSTALLER"
+source "$DISCOPARTY_TEST_DRIVER_COMMON"
 TAKE_OVER_LEGACY=1
 IMPORT_LEGACY_TOKEN=1
 main
 EOF
 chmod 700 "$LEGACY_TEST_ROOT/success-driver.sh"
 env "${LEGACY_COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_LEGACY_MAINTENANCE_ACCEPTED=LEGACY_MAINTENANCE_ACCEPTED \
+  DISCOPARTY_CODEX_LEGACY_MAINTENANCE_ACCEPTED=LEGACY_MAINTENANCE_ACCEPTED \
   "$LEGACY_TEST_ROOT/success-driver.sh" \
   >"$TEST_ROOT/legacy-success.log"
 
@@ -1769,16 +1769,16 @@ PY
   "$LEGACY_NEW_STATE/legacy-takeover.json"
 
 # Keeping the old disabled plist for rollback must not permanently block later
-# Threadkeep reinstalls. Acceptance requires the exact old service, an unloaded
+# Disco Party reinstalls. Acceptance requires the exact old service, an unloaded
 # and disabled old label, and a matching new_ready marker plus backup hashes.
-printf '%s\n' retained-threadkeep-plist \
-  > "$LEGACY_TEST_HOME/Library/LaunchAgents/com.threadkeep.codex-discord-bridge.plist"
-chmod 600 "$LEGACY_TEST_HOME/Library/LaunchAgents/com.threadkeep.codex-discord-bridge.plist"
+printf '%s\n' retained-discoparty-plist \
+  > "$LEGACY_TEST_HOME/Library/LaunchAgents/com.discoparty.codex-discord-bridge.plist"
+chmod 600 "$LEGACY_TEST_HOME/Library/LaunchAgents/com.discoparty.codex-discord-bridge.plist"
 cat > "$LEGACY_TEST_ROOT/archived-reinstall-driver.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-source "$THREADKEEP_TEST_SOURCEABLE_INSTALLER"
-source "$THREADKEEP_TEST_DRIVER_COMMON"
+source "$DISCOPARTY_TEST_SOURCEABLE_INSTALLER"
+source "$DISCOPARTY_TEST_DRIVER_COMMON"
 REINSTALL=1
 TAKE_OVER_LEGACY=0
 IMPORT_LEGACY_TOKEN=0
@@ -1792,7 +1792,7 @@ grep -Fq "disabled, integrity-checked rollback artifact" \
   "$TEST_ROOT/legacy-archived-reinstall.log"
 [ "$(cat "$LEGACY_LAUNCH_STATE")" = "unloaded" ]
 test -e "$LEGACY_DISABLED_STATE"
-rm -f "$LEGACY_TEST_HOME/Library/LaunchAgents/com.threadkeep.codex-discord-bridge.plist"
+rm -f "$LEGACY_TEST_HOME/Library/LaunchAgents/com.discoparty.codex-discord-bridge.plist"
 env "${LEGACY_COMMON_ENV[@]}" \
   "$LEGACY_TEST_ROOT/archived-reinstall-driver.sh" \
   >"$TEST_ROOT/legacy-archived-after-uninstall.log"
@@ -1801,22 +1801,22 @@ grep -Fq "disabled, integrity-checked rollback artifact" \
 
 # If the durable cursor or marker no longer matches, bootstrap is forbidden.
 # Rollback removes only the still-empty replacement ledger, restores the prior
-# Threadkeep Keychain snapshot, and restarts the exact old label.
+# Disco Party Keychain snapshot, and restarts the exact old label.
 create_legacy_fixture public completed
-printf '%s' prior-threadkeep-token \
+printf '%s' prior-discoparty-token \
   > "$LEGACY_TEST_HOME/.fake-keychain-discord-bot-token-codex"
 chmod 600 "$LEGACY_TEST_HOME/.fake-keychain-discord-bot-token-codex"
 cat > "$LEGACY_TEST_ROOT/cursor-mismatch-driver.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-source "$THREADKEEP_TEST_SOURCEABLE_INSTALLER"
-source "$THREADKEEP_TEST_DRIVER_COMMON"
+source "$DISCOPARTY_TEST_SOURCEABLE_INSTALLER"
+source "$DISCOPARTY_TEST_DRIVER_COMMON"
 eval "$(declare -f reconcile_legacy_root_cursor | sed '1s/reconcile_legacy_root_cursor/production_reconcile_legacy_root_cursor/')"
 TAKE_OVER_LEGACY=1
 IMPORT_LEGACY_TOKEN=1
 reconcile_legacy_root_cursor() {
   production_reconcile_legacy_root_cursor
-  "$PYTHON_BIN" - "$STATE_DIR/jobs.sqlite3" "$THREADKEEP_CODEX_CHANNEL_ID" "$THREADKEEP_TEST_POLICY_BINDING" <<'PY'
+  "$PYTHON_BIN" - "$STATE_DIR/jobs.sqlite3" "$DISCOPARTY_CODEX_CHANNEL_ID" "$DISCOPARTY_TEST_POLICY_BINDING" <<'PY'
 import sqlite3
 import sys
 database, channel, binding = sys.argv[1:]
@@ -1831,7 +1831,7 @@ main
 EOF
 chmod 700 "$LEGACY_TEST_ROOT/cursor-mismatch-driver.sh"
 if env "${LEGACY_COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_LEGACY_MAINTENANCE_ACCEPTED=LEGACY_MAINTENANCE_ACCEPTED \
+  DISCOPARTY_CODEX_LEGACY_MAINTENANCE_ACCEPTED=LEGACY_MAINTENANCE_ACCEPTED \
   "$LEGACY_TEST_ROOT/cursor-mismatch-driver.sh" \
   >"$TEST_ROOT/legacy-cursor-mismatch.log" 2>&1; then
   echo "replacement bootstrapped with a mismatched legacy cursor" >&2
@@ -1839,7 +1839,7 @@ if env "${LEGACY_COMMON_ENV[@]}" \
 fi
 grep -Fq "replacement bootstrap is forbidden" "$TEST_ROOT/legacy-cursor-mismatch.log"
 [ "$(cat "$LEGACY_TEST_HOME/.fake-keychain-discord-bot-token-codex")" = \
-  "prior-threadkeep-token" ]
+  "prior-discoparty-token" ]
 [ "$(cat "$LEGACY_LAUNCH_STATE")" = "loaded" ]
 test ! -e "$LEGACY_DISABLED_STATE"
 test ! -e "$LEGACY_NEW_STATE/jobs.sqlite3"
@@ -1854,15 +1854,15 @@ create_legacy_fixture public uncertain
 cat > "$LEGACY_TEST_ROOT/nonquiescent-driver.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-source "$THREADKEEP_TEST_SOURCEABLE_INSTALLER"
-source "$THREADKEEP_TEST_DRIVER_COMMON"
+source "$DISCOPARTY_TEST_SOURCEABLE_INSTALLER"
+source "$DISCOPARTY_TEST_DRIVER_COMMON"
 TAKE_OVER_LEGACY=1
 IMPORT_LEGACY_TOKEN=1
 main
 EOF
 chmod 700 "$LEGACY_TEST_ROOT/nonquiescent-driver.sh"
 if env "${LEGACY_COMMON_ENV[@]}" \
-  THREADKEEP_CODEX_LEGACY_MAINTENANCE_ACCEPTED=LEGACY_MAINTENANCE_ACCEPTED \
+  DISCOPARTY_CODEX_LEGACY_MAINTENANCE_ACCEPTED=LEGACY_MAINTENANCE_ACCEPTED \
   "$LEGACY_TEST_ROOT/nonquiescent-driver.sh" \
   >"$TEST_ROOT/legacy-nonquiescent.log" 2>&1; then
   echo "takeover accepted unfinished legacy jobs or deliveries" >&2
@@ -1883,8 +1883,8 @@ LEGACY_SURVIVOR_PID=$!
 cat > "$LEGACY_TEST_ROOT/descendant-driver.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-source "$THREADKEEP_TEST_SOURCEABLE_INSTALLER"
-source "$THREADKEEP_TEST_DRIVER_COMMON"
+source "$DISCOPARTY_TEST_SOURCEABLE_INSTALLER"
+source "$DISCOPARTY_TEST_DRIVER_COMMON"
 TAKE_OVER_LEGACY=1
 IMPORT_LEGACY_TOKEN=1
 capture_legacy_process_tree() { production_capture_legacy_process_tree; }
@@ -1894,8 +1894,8 @@ main
 EOF
 chmod 700 "$LEGACY_TEST_ROOT/descendant-driver.sh"
 if env "${LEGACY_COMMON_ENV[@]}" \
-  "THREADKEEP_TEST_LEGACY_PID=$LEGACY_SURVIVOR_PID" \
-  THREADKEEP_CODEX_LEGACY_MAINTENANCE_ACCEPTED=LEGACY_MAINTENANCE_ACCEPTED \
+  "DISCOPARTY_TEST_LEGACY_PID=$LEGACY_SURVIVOR_PID" \
+  DISCOPARTY_CODEX_LEGACY_MAINTENANCE_ACCEPTED=LEGACY_MAINTENANCE_ACCEPTED \
   "$LEGACY_TEST_ROOT/descendant-driver.sh" \
   >"$TEST_ROOT/legacy-descendant.log" 2>&1; then
   kill "$LEGACY_SURVIVOR_PID" >/dev/null 2>&1 || true
@@ -1931,32 +1931,32 @@ RACE_MUTATION_MARKER="$RACE_ROOT/unexpected-mutation"
 cat > "$RACE_ROOT/bootout-failure-driver.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-source "$THREADKEEP_TEST_SOURCEABLE_INSTALLER"
+source "$DISCOPARTY_TEST_SOURCEABLE_INSTALLER"
 
 SCRATCH=0
 REINSTALL=1
 START_MONITOR=0
-LAUNCHCTL_BIN="$THREADKEEP_TEST_LAUNCHCTL_BIN"
+LAUNCHCTL_BIN="$DISCOPARTY_TEST_LAUNCHCTL_BIN"
 
 check_no_api_key() { :; }
 check_prerequisites() { :; }
 detect_and_validate_legacy() { :; }
 resolve_settings() {
-  PYTHON_BIN="$THREADKEEP_TEST_REAL_PYTHON"
-  REPO_ROOT="$THREADKEEP_TEST_REPO"
-  CONFIG_PATH="$THREADKEEP_TEST_RACE_CONFIG"
-  PLIST_PATH="$THREADKEEP_TEST_RACE_PLIST"
-  STATE_DIR="$THREADKEEP_TEST_RACE_ROOT/state"
-  LOG_DIR="$THREADKEEP_TEST_RACE_ROOT/logs"
+  PYTHON_BIN="$DISCOPARTY_TEST_REAL_PYTHON"
+  REPO_ROOT="$DISCOPARTY_TEST_REPO"
+  CONFIG_PATH="$DISCOPARTY_TEST_RACE_CONFIG"
+  PLIST_PATH="$DISCOPARTY_TEST_RACE_PLIST"
+  STATE_DIR="$DISCOPARTY_TEST_RACE_ROOT/state"
+  LOG_DIR="$DISCOPARTY_TEST_RACE_ROOT/logs"
   WORKER_HOME="$STATE_DIR/home"
-  CODEX_HOME_DIR="$THREADKEEP_TEST_RACE_CODEX_HOME"
-  SHARED_SKILLS_ROOT="$THREADKEEP_TEST_SHARED_SKILLS_ROOT"
-  THREADKEEP_CODEX_WORKING_DIRECTORY="$THREADKEEP_TEST_WORK_DIR"
-  THREADKEEP_CODEX_SANDBOX_MODE="workspace-write"
+  CODEX_HOME_DIR="$DISCOPARTY_TEST_RACE_CODEX_HOME"
+  SHARED_SKILLS_ROOT="$DISCOPARTY_TEST_SHARED_SKILLS_ROOT"
+  DISCOPARTY_CODEX_WORKING_DIRECTORY="$DISCOPARTY_TEST_WORK_DIR"
+  DISCOPARTY_CODEX_SANDBOX_MODE="workspace-write"
   TOPOLOGY_VALIDATED=1
 }
 unexpected_mutation() {
-  : > "$THREADKEEP_TEST_RACE_MUTATION_MARKER"
+  : > "$DISCOPARTY_TEST_RACE_MUTATION_MARKER"
   return 97
 }
 prepare_log_directory() { unexpected_mutation; }
@@ -1980,21 +1980,21 @@ chmod 700 "$RACE_ROOT/bootout-failure-driver.sh"
 
 if env \
   "HOME=$TEST_HOME" \
-  "THREADKEEP_TEST_SOURCEABLE_INSTALLER=$SOURCEABLE_INSTALLER" \
-  "THREADKEEP_TEST_REPO=$TEST_REPO" \
-  "THREADKEEP_TEST_REAL_PYTHON=$REAL_PYTHON" \
-  "THREADKEEP_TEST_RACE_ROOT=$RACE_ROOT" \
-  "THREADKEEP_TEST_RACE_CONFIG=$RACE_CONFIG" \
-  "THREADKEEP_TEST_RACE_PLIST=$RACE_PLIST" \
-  "THREADKEEP_TEST_RACE_CODEX_HOME=$RACE_CODEX_HOME" \
-  "THREADKEEP_TEST_RACE_MUTATION_MARKER=$RACE_MUTATION_MARKER" \
-  "THREADKEEP_TEST_WORK_DIR=$WORK_DIR" \
-  "THREADKEEP_TEST_SHARED_SKILLS_ROOT=$TEST_ROOT/claude-workspace/x_System/Skills" \
-  "THREADKEEP_TEST_LAUNCHCTL_BIN=$FAKE_BIN/launchctl" \
-  "THREADKEEP_TEST_LAUNCHCTL_LOG=$LAUNCHCTL_LOG" \
-  "THREADKEEP_TEST_LAUNCHCTL_SCENARIO=loaded-bootout-fails" \
-  "THREADKEEP_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret" \
-  "THREADKEEP_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG" \
+  "DISCOPARTY_TEST_SOURCEABLE_INSTALLER=$SOURCEABLE_INSTALLER" \
+  "DISCOPARTY_TEST_REPO=$TEST_REPO" \
+  "DISCOPARTY_TEST_REAL_PYTHON=$REAL_PYTHON" \
+  "DISCOPARTY_TEST_RACE_ROOT=$RACE_ROOT" \
+  "DISCOPARTY_TEST_RACE_CONFIG=$RACE_CONFIG" \
+  "DISCOPARTY_TEST_RACE_PLIST=$RACE_PLIST" \
+  "DISCOPARTY_TEST_RACE_CODEX_HOME=$RACE_CODEX_HOME" \
+  "DISCOPARTY_TEST_RACE_MUTATION_MARKER=$RACE_MUTATION_MARKER" \
+  "DISCOPARTY_TEST_WORK_DIR=$WORK_DIR" \
+  "DISCOPARTY_TEST_SHARED_SKILLS_ROOT=$TEST_ROOT/claude-workspace/x_System/Skills" \
+  "DISCOPARTY_TEST_LAUNCHCTL_BIN=$FAKE_BIN/launchctl" \
+  "DISCOPARTY_TEST_LAUNCHCTL_LOG=$LAUNCHCTL_LOG" \
+  "DISCOPARTY_TEST_LAUNCHCTL_SCENARIO=loaded-bootout-fails" \
+  "DISCOPARTY_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret" \
+  "DISCOPARTY_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG" \
   "$RACE_ROOT/bootout-failure-driver.sh" \
   >"$TEST_ROOT/reinstall-bootout-failure.log" 2>&1; then
   echo "installer continued after existing Codex agent bootout failed" >&2
@@ -2006,67 +2006,67 @@ test ! -e "$RACE_MUTATION_MARKER"
 cat > "$RACE_ROOT/success-driver.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-source "$THREADKEEP_TEST_SOURCEABLE_INSTALLER"
+source "$DISCOPARTY_TEST_SOURCEABLE_INSTALLER"
 
 SCRATCH=0
 REINSTALL=1
 START_MONITOR=0
-LAUNCHCTL_BIN="$THREADKEEP_TEST_LAUNCHCTL_BIN"
+LAUNCHCTL_BIN="$DISCOPARTY_TEST_LAUNCHCTL_BIN"
 
 check_no_api_key() { :; }
 check_prerequisites() { :; }
 detect_and_validate_legacy() { :; }
 resolve_settings() {
-  PYTHON_BIN="$THREADKEEP_TEST_REAL_PYTHON"
-  REPO_ROOT="$THREADKEEP_TEST_REPO"
-  CONFIG_PATH="$THREADKEEP_TEST_RACE_CONFIG"
-  PLIST_PATH="$THREADKEEP_TEST_RACE_PLIST"
-  STATE_DIR="$THREADKEEP_TEST_RACE_ROOT/state"
-  LOG_DIR="$THREADKEEP_TEST_RACE_ROOT/logs"
+  PYTHON_BIN="$DISCOPARTY_TEST_REAL_PYTHON"
+  REPO_ROOT="$DISCOPARTY_TEST_REPO"
+  CONFIG_PATH="$DISCOPARTY_TEST_RACE_CONFIG"
+  PLIST_PATH="$DISCOPARTY_TEST_RACE_PLIST"
+  STATE_DIR="$DISCOPARTY_TEST_RACE_ROOT/state"
+  LOG_DIR="$DISCOPARTY_TEST_RACE_ROOT/logs"
   WORKER_HOME="$STATE_DIR/home"
-  CODEX_HOME_DIR="$THREADKEEP_TEST_RACE_CODEX_HOME"
-  SHARED_SKILLS_ROOT="$THREADKEEP_TEST_SHARED_SKILLS_ROOT"
-  THREADKEEP_CODEX_WORKING_DIRECTORY="$THREADKEEP_TEST_WORK_DIR"
-  THREADKEEP_CODEX_SANDBOX_MODE="workspace-write"
+  CODEX_HOME_DIR="$DISCOPARTY_TEST_RACE_CODEX_HOME"
+  SHARED_SKILLS_ROOT="$DISCOPARTY_TEST_SHARED_SKILLS_ROOT"
+  DISCOPARTY_CODEX_WORKING_DIRECTORY="$DISCOPARTY_TEST_WORK_DIR"
+  DISCOPARTY_CODEX_SANDBOX_MODE="workspace-write"
   TOPOLOGY_VALIDATED=1
 }
 require_stopped() {
-  [ "$(cat "$THREADKEEP_TEST_LAUNCHCTL_STATE")" = "unloaded" ]
+  [ "$(cat "$DISCOPARTY_TEST_LAUNCHCTL_STATE")" = "unloaded" ]
 }
 prepare_log_directory() {
   require_stopped
-  printf '%s\n' mutation-log-directory >> "$THREADKEEP_TEST_INSTALL_ORDER_LOG"
+  printf '%s\n' mutation-log-directory >> "$DISCOPARTY_TEST_INSTALL_ORDER_LOG"
 }
 prepare_isolated_codex() {
   require_stopped
-  printf '%s\n' mutation-codex-home >> "$THREADKEEP_TEST_INSTALL_ORDER_LOG"
+  printf '%s\n' mutation-codex-home >> "$DISCOPARTY_TEST_INSTALL_ORDER_LOG"
 }
 prepare_shared_skill_bridge() {
   require_stopped
-  printf '%s\n' mutation-shared-skills >> "$THREADKEEP_TEST_INSTALL_ORDER_LOG"
+  printf '%s\n' mutation-shared-skills >> "$DISCOPARTY_TEST_INSTALL_ORDER_LOG"
 }
 prepare_vault_policy_seal() {
   require_stopped
-  printf '%s\n' mutation-vault-policy >> "$THREADKEEP_TEST_INSTALL_ORDER_LOG"
+  printf '%s\n' mutation-vault-policy >> "$DISCOPARTY_TEST_INSTALL_ORDER_LOG"
 }
 prepare_python_runtime() { require_stopped; }
 verify_reviewed_codex_package() {
   require_stopped
-  printf '%s\n' appserver-schema-preflight >> "$THREADKEEP_TEST_INSTALL_ORDER_LOG"
+  printf '%s\n' appserver-schema-preflight >> "$DISCOPARTY_TEST_INSTALL_ORDER_LOG"
 }
 ensure_isolated_chatgpt_login() { require_stopped; }
 resolve_bot_token() { require_stopped; }
 store_bot_token() {
   require_stopped
-  printf '%s\n' mutation-keychain >> "$THREADKEEP_TEST_INSTALL_ORDER_LOG"
+  printf '%s\n' mutation-keychain >> "$DISCOPARTY_TEST_INSTALL_ORDER_LOG"
 }
 update_codex_config() {
   require_stopped
-  printf '%s\n' mutation-threadkeep-config >> "$THREADKEEP_TEST_INSTALL_ORDER_LOG"
+  printf '%s\n' mutation-discoparty-config >> "$DISCOPARTY_TEST_INSTALL_ORDER_LOG"
 }
 run_preflight() {
   require_stopped
-  printf '%s\n' provider-preflight >> "$THREADKEEP_TEST_INSTALL_ORDER_LOG"
+  printf '%s\n' provider-preflight >> "$DISCOPARTY_TEST_INSTALL_ORDER_LOG"
 }
 render_plist() { require_stopped; }
 bootstrap_agent() {
@@ -2081,22 +2081,22 @@ chmod 700 "$RACE_ROOT/success-driver.sh"
 
 env \
   "HOME=$TEST_HOME" \
-  "THREADKEEP_TEST_SOURCEABLE_INSTALLER=$SOURCEABLE_INSTALLER" \
-  "THREADKEEP_TEST_REPO=$TEST_REPO" \
-  "THREADKEEP_TEST_REAL_PYTHON=$REAL_PYTHON" \
-  "THREADKEEP_TEST_RACE_ROOT=$RACE_ROOT" \
-  "THREADKEEP_TEST_RACE_CONFIG=$RACE_CONFIG" \
-  "THREADKEEP_TEST_RACE_PLIST=$RACE_PLIST" \
-  "THREADKEEP_TEST_RACE_CODEX_HOME=$RACE_CODEX_HOME" \
-  "THREADKEEP_TEST_WORK_DIR=$WORK_DIR" \
-  "THREADKEEP_TEST_SHARED_SKILLS_ROOT=$TEST_ROOT/claude-workspace/x_System/Skills" \
-  "THREADKEEP_TEST_LAUNCHCTL_BIN=$FAKE_BIN/launchctl" \
-  "THREADKEEP_TEST_LAUNCHCTL_LOG=$LAUNCHCTL_LOG" \
-  "THREADKEEP_TEST_LAUNCHCTL_SCENARIO=stateful" \
-  "THREADKEEP_TEST_LAUNCHCTL_STATE=$RACE_STATE" \
-  "THREADKEEP_TEST_INSTALL_ORDER_LOG=$RACE_ORDER" \
-  "THREADKEEP_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret" \
-  "THREADKEEP_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG" \
+  "DISCOPARTY_TEST_SOURCEABLE_INSTALLER=$SOURCEABLE_INSTALLER" \
+  "DISCOPARTY_TEST_REPO=$TEST_REPO" \
+  "DISCOPARTY_TEST_REAL_PYTHON=$REAL_PYTHON" \
+  "DISCOPARTY_TEST_RACE_ROOT=$RACE_ROOT" \
+  "DISCOPARTY_TEST_RACE_CONFIG=$RACE_CONFIG" \
+  "DISCOPARTY_TEST_RACE_PLIST=$RACE_PLIST" \
+  "DISCOPARTY_TEST_RACE_CODEX_HOME=$RACE_CODEX_HOME" \
+  "DISCOPARTY_TEST_WORK_DIR=$WORK_DIR" \
+  "DISCOPARTY_TEST_SHARED_SKILLS_ROOT=$TEST_ROOT/claude-workspace/x_System/Skills" \
+  "DISCOPARTY_TEST_LAUNCHCTL_BIN=$FAKE_BIN/launchctl" \
+  "DISCOPARTY_TEST_LAUNCHCTL_LOG=$LAUNCHCTL_LOG" \
+  "DISCOPARTY_TEST_LAUNCHCTL_SCENARIO=stateful" \
+  "DISCOPARTY_TEST_LAUNCHCTL_STATE=$RACE_STATE" \
+  "DISCOPARTY_TEST_INSTALL_ORDER_LOG=$RACE_ORDER" \
+  "DISCOPARTY_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret" \
+  "DISCOPARTY_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG" \
   "$RACE_ROOT/success-driver.sh" >"$TEST_ROOT/reinstall-order.log"
 
 bootout_line="$(grep -n -m 1 '^launchctl bootout ' "$RACE_ORDER" | cut -d: -f1)"
@@ -2122,35 +2122,35 @@ printf '%s\n' prior-token > "$RACE_KEYCHAIN"
 cat > "$RACE_ROOT/rollback-driver.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-source "$THREADKEEP_TEST_SOURCEABLE_INSTALLER"
+source "$DISCOPARTY_TEST_SOURCEABLE_INSTALLER"
 
 SCRATCH=0
 REINSTALL=1
 START_MONITOR=0
-LAUNCHCTL_BIN="$THREADKEEP_TEST_LAUNCHCTL_BIN"
-SECURITY_BIN="$THREADKEEP_TEST_SECURITY_BIN"
+LAUNCHCTL_BIN="$DISCOPARTY_TEST_LAUNCHCTL_BIN"
+SECURITY_BIN="$DISCOPARTY_TEST_SECURITY_BIN"
 
 check_no_api_key() { :; }
 check_prerequisites() { :; }
 detect_and_validate_legacy() { :; }
 resolve_settings() {
-  PYTHON_BIN="$THREADKEEP_TEST_REAL_PYTHON"
-  REPO_ROOT="$THREADKEEP_TEST_REPO"
-  CONFIG_PATH="$THREADKEEP_TEST_RACE_CONFIG"
-  PLIST_PATH="$THREADKEEP_TEST_RACE_PLIST"
-  STATE_DIR="$THREADKEEP_TEST_RACE_ROOT/state"
-  LOG_DIR="$THREADKEEP_TEST_RACE_ROOT/logs"
+  PYTHON_BIN="$DISCOPARTY_TEST_REAL_PYTHON"
+  REPO_ROOT="$DISCOPARTY_TEST_REPO"
+  CONFIG_PATH="$DISCOPARTY_TEST_RACE_CONFIG"
+  PLIST_PATH="$DISCOPARTY_TEST_RACE_PLIST"
+  STATE_DIR="$DISCOPARTY_TEST_RACE_ROOT/state"
+  LOG_DIR="$DISCOPARTY_TEST_RACE_ROOT/logs"
   WORKER_HOME="$STATE_DIR/home"
-  CODEX_HOME_DIR="$THREADKEEP_TEST_RACE_CODEX_HOME"
-  SHARED_SKILLS_ROOT="$THREADKEEP_TEST_SHARED_SKILLS_ROOT"
-  THREADKEEP_CODEX_WORKING_DIRECTORY="$THREADKEEP_TEST_WORK_DIR"
-  THREADKEEP_CODEX_SANDBOX_MODE="workspace-write"
+  CODEX_HOME_DIR="$DISCOPARTY_TEST_RACE_CODEX_HOME"
+  SHARED_SKILLS_ROOT="$DISCOPARTY_TEST_SHARED_SKILLS_ROOT"
+  DISCOPARTY_CODEX_WORKING_DIRECTORY="$DISCOPARTY_TEST_WORK_DIR"
+  DISCOPARTY_CODEX_SANDBOX_MODE="workspace-write"
   TOPOLOGY_VALIDATED=1
 }
 prepare_log_directory() { :; }
 prepare_isolated_codex() {
   CODEX_CONFIG_EXISTED=1
-  CODEX_CONFIG_BACKUP="$(mktemp "$THREADKEEP_TEST_RACE_ROOT/codex-config-backup.XXXXXX")"
+  CODEX_CONFIG_BACKUP="$(mktemp "$DISCOPARTY_TEST_RACE_ROOT/codex-config-backup.XXXXXX")"
   cp -p "$CODEX_HOME_DIR/config.toml" "$CODEX_CONFIG_BACKUP"
   CODEX_CONFIG_MUTATED=1
   printf '%s\n' failed-new-codex-policy > "$CODEX_HOME_DIR/config.toml"
@@ -2169,13 +2169,13 @@ store_bot_token() {
 }
 update_codex_config() {
   CONFIG_EXISTED=1
-  CONFIG_BACKUP="$(mktemp "$THREADKEEP_TEST_RACE_ROOT/config-backup.XXXXXX")"
+  CONFIG_BACKUP="$(mktemp "$DISCOPARTY_TEST_RACE_ROOT/config-backup.XXXXXX")"
   cp -p "$CONFIG_PATH" "$CONFIG_BACKUP"
   CONFIG_MUTATED=1
   printf '%s\n' failed-new-config > "$CONFIG_PATH"
 }
 run_preflight() {
-  printf '%s\n' provider-preflight-failed >> "$THREADKEEP_TEST_INSTALL_ORDER_LOG"
+  printf '%s\n' provider-preflight-failed >> "$DISCOPARTY_TEST_INSTALL_ORDER_LOG"
   return 79
 }
 render_plist() { return 90; }
@@ -2188,29 +2188,29 @@ chmod 700 "$RACE_ROOT/rollback-driver.sh"
 
 if env \
   "HOME=$TEST_HOME" \
-  "THREADKEEP_TEST_SOURCEABLE_INSTALLER=$SOURCEABLE_INSTALLER" \
-  "THREADKEEP_TEST_REPO=$TEST_REPO" \
-  "THREADKEEP_TEST_REAL_PYTHON=$REAL_PYTHON" \
-  "THREADKEEP_TEST_RACE_ROOT=$RACE_ROOT" \
-  "THREADKEEP_TEST_RACE_CONFIG=$RACE_CONFIG" \
-  "THREADKEEP_TEST_RACE_PLIST=$RACE_PLIST" \
-  "THREADKEEP_TEST_RACE_CODEX_HOME=$RACE_CODEX_HOME" \
-  "THREADKEEP_TEST_WORK_DIR=$WORK_DIR" \
-  "THREADKEEP_TEST_SHARED_SKILLS_ROOT=$TEST_ROOT/claude-workspace/x_System/Skills" \
-  "THREADKEEP_TEST_LAUNCHCTL_BIN=$FAKE_BIN/launchctl" \
-  "THREADKEEP_TEST_SECURITY_BIN=$FAKE_BIN/security" \
-  "THREADKEEP_TEST_LAUNCHCTL_LOG=$LAUNCHCTL_LOG" \
-  "THREADKEEP_TEST_LAUNCHCTL_SCENARIO=stateful" \
-  "THREADKEEP_TEST_LAUNCHCTL_STATE=$RACE_STATE" \
-  "THREADKEEP_TEST_INSTALL_ORDER_LOG=$RACE_ORDER" \
-  "THREADKEEP_TEST_EXPECT_RESTORED_CONFIG_PATH=$RACE_CONFIG" \
-  "THREADKEEP_TEST_EXPECT_RESTORED_CONFIG_VALUE=prior-config" \
-  "THREADKEEP_TEST_EXPECT_RESTORED_CODEX_CONFIG_PATH=$RACE_CODEX_HOME/config.toml" \
-  "THREADKEEP_TEST_EXPECT_RESTORED_CODEX_CONFIG_VALUE=prior-codex-policy" \
-  "THREADKEEP_TEST_EXPECT_RESTORED_KEYCHAIN_PATH=$RACE_KEYCHAIN" \
-  "THREADKEEP_TEST_EXPECT_RESTORED_KEYCHAIN_VALUE=prior-token" \
-  "THREADKEEP_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret" \
-  "THREADKEEP_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG" \
+  "DISCOPARTY_TEST_SOURCEABLE_INSTALLER=$SOURCEABLE_INSTALLER" \
+  "DISCOPARTY_TEST_REPO=$TEST_REPO" \
+  "DISCOPARTY_TEST_REAL_PYTHON=$REAL_PYTHON" \
+  "DISCOPARTY_TEST_RACE_ROOT=$RACE_ROOT" \
+  "DISCOPARTY_TEST_RACE_CONFIG=$RACE_CONFIG" \
+  "DISCOPARTY_TEST_RACE_PLIST=$RACE_PLIST" \
+  "DISCOPARTY_TEST_RACE_CODEX_HOME=$RACE_CODEX_HOME" \
+  "DISCOPARTY_TEST_WORK_DIR=$WORK_DIR" \
+  "DISCOPARTY_TEST_SHARED_SKILLS_ROOT=$TEST_ROOT/claude-workspace/x_System/Skills" \
+  "DISCOPARTY_TEST_LAUNCHCTL_BIN=$FAKE_BIN/launchctl" \
+  "DISCOPARTY_TEST_SECURITY_BIN=$FAKE_BIN/security" \
+  "DISCOPARTY_TEST_LAUNCHCTL_LOG=$LAUNCHCTL_LOG" \
+  "DISCOPARTY_TEST_LAUNCHCTL_SCENARIO=stateful" \
+  "DISCOPARTY_TEST_LAUNCHCTL_STATE=$RACE_STATE" \
+  "DISCOPARTY_TEST_INSTALL_ORDER_LOG=$RACE_ORDER" \
+  "DISCOPARTY_TEST_EXPECT_RESTORED_CONFIG_PATH=$RACE_CONFIG" \
+  "DISCOPARTY_TEST_EXPECT_RESTORED_CONFIG_VALUE=prior-config" \
+  "DISCOPARTY_TEST_EXPECT_RESTORED_CODEX_CONFIG_PATH=$RACE_CODEX_HOME/config.toml" \
+  "DISCOPARTY_TEST_EXPECT_RESTORED_CODEX_CONFIG_VALUE=prior-codex-policy" \
+  "DISCOPARTY_TEST_EXPECT_RESTORED_KEYCHAIN_PATH=$RACE_KEYCHAIN" \
+  "DISCOPARTY_TEST_EXPECT_RESTORED_KEYCHAIN_VALUE=prior-token" \
+  "DISCOPARTY_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret" \
+  "DISCOPARTY_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG" \
   "$RACE_ROOT/rollback-driver.sh" >"$TEST_ROOT/reinstall-rollback.log" 2>&1; then
   echo "installer reinstall rollback fixture unexpectedly succeeded" >&2
   exit 1
@@ -2219,13 +2219,13 @@ fi
 [ "$(cat "$RACE_CODEX_HOME/config.toml")" = "prior-codex-policy" ]
 [ "$(cat "$RACE_KEYCHAIN")" = "prior-token" ]
 [ "$(cat "$RACE_STATE")" = "loaded" ]
-grep -Fq "Restored and restarted the prior com.threadkeep.codex-discord-bridge" \
+grep -Fq "Restored and restarted the prior com.discoparty.codex-discord-bridge" \
   "$TEST_ROOT/reinstall-rollback.log"
 failed_line="$(grep -n -m 1 '^provider-preflight-failed$' "$RACE_ORDER" | cut -d: -f1)"
 rollback_bootstrap_line="$(grep -n -m 1 '^launchctl bootstrap ' "$RACE_ORDER" | cut -d: -f1)"
 [ "$failed_line" -lt "$rollback_bootstrap_line" ]
 
-touch "$TEST_HOME/Library/LaunchAgents/com.threadkeep.discord-gateway-client.plist"
+touch "$TEST_HOME/Library/LaunchAgents/com.discoparty.discord-gateway-client.plist"
 printf '%s' 'claude-token' > "$TEST_HOME/.fake-keychain-discord-bot-token"
 AUTH_LOGIN_MARKER="$TEST_HOME/.fake-codex-chatgpt-login"
 AUTH_LOGOUT_LOG="$TEST_ROOT/auth-logout.log"
@@ -2233,23 +2233,23 @@ printf '%s\n' logged-in > "$AUTH_LOGIN_MARKER"
 if env \
   "HOME=$TEST_HOME" \
   "PATH=$FAKE_BIN:/usr/bin:/bin:/usr/sbin:/sbin" \
-  "THREADKEEP_TEST_LAUNCHCTL_LOG=$LAUNCHCTL_LOG" \
-  "THREADKEEP_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret" \
-  "THREADKEEP_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG" \
-  "THREADKEEP_TEST_LAUNCHCTL_SCENARIO=loaded-bootout-fails" \
-  "THREADKEEP_TEST_MODE=1" \
-  "THREADKEEP_TEST_SECURITY_BIN=$FAKE_BIN/security" \
-  "THREADKEEP_TEST_LAUNCHCTL_BIN=$FAKE_BIN/launchctl" \
-  "THREADKEEP_TEST_PYTHON_BIN=$FAKE_BIN/python3" \
-  "THREADKEEP_TEST_EXPECT_REAL_HOME=$TEST_HOME" \
-  "THREADKEEP_TEST_AUTH_LOGOUT_MARKER=$AUTH_LOGIN_MARKER" \
-  "THREADKEEP_TEST_AUTH_LOGOUT_LOG=$AUTH_LOGOUT_LOG" \
+  "DISCOPARTY_TEST_LAUNCHCTL_LOG=$LAUNCHCTL_LOG" \
+  "DISCOPARTY_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret" \
+  "DISCOPARTY_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG" \
+  "DISCOPARTY_TEST_LAUNCHCTL_SCENARIO=loaded-bootout-fails" \
+  "DISCOPARTY_TEST_MODE=1" \
+  "DISCOPARTY_TEST_SECURITY_BIN=$FAKE_BIN/security" \
+  "DISCOPARTY_TEST_LAUNCHCTL_BIN=$FAKE_BIN/launchctl" \
+  "DISCOPARTY_TEST_PYTHON_BIN=$FAKE_BIN/python3" \
+  "DISCOPARTY_TEST_EXPECT_REAL_HOME=$TEST_HOME" \
+  "DISCOPARTY_TEST_AUTH_LOGOUT_MARKER=$AUTH_LOGIN_MARKER" \
+  "DISCOPARTY_TEST_AUTH_LOGOUT_LOG=$AUTH_LOGOUT_LOG" \
   "$TEST_REPO/uninstall.sh" --codex --non-interactive \
   >"$TEST_ROOT/uninstall-bootout-failure.log" 2>&1; then
   echo "Codex uninstall reported success after launchctl bootout failed" >&2
   exit 1
 fi
-grep -Fq "Could not unload com.threadkeep.codex-discord-bridge" \
+grep -Fq "Could not unload com.discoparty.codex-discord-bridge" \
   "$TEST_ROOT/uninstall-bootout-failure.log"
 test -f "$PLIST"
 test -f "$TEST_HOME/.fake-keychain-discord-bot-token-codex"
@@ -2258,16 +2258,16 @@ test -f "$AUTH_LOGIN_MARKER"
 env \
   "HOME=$TEST_HOME" \
   "PATH=$FAKE_BIN:/usr/bin:/bin:/usr/sbin:/sbin" \
-  "THREADKEEP_TEST_LAUNCHCTL_LOG=$LAUNCHCTL_LOG" \
-  "THREADKEEP_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret" \
-  "THREADKEEP_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG" \
-  "THREADKEEP_TEST_MODE=1" \
-  "THREADKEEP_TEST_SECURITY_BIN=$FAKE_BIN/security" \
-  "THREADKEEP_TEST_LAUNCHCTL_BIN=$FAKE_BIN/launchctl" \
-  "THREADKEEP_TEST_PYTHON_BIN=$FAKE_BIN/python3" \
-  "THREADKEEP_TEST_EXPECT_REAL_HOME=$TEST_HOME" \
-  "THREADKEEP_TEST_AUTH_LOGOUT_MARKER=$AUTH_LOGIN_MARKER" \
-  "THREADKEEP_TEST_AUTH_LOGOUT_LOG=$AUTH_LOGOUT_LOG" \
+  "DISCOPARTY_TEST_LAUNCHCTL_LOG=$LAUNCHCTL_LOG" \
+  "DISCOPARTY_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret" \
+  "DISCOPARTY_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG" \
+  "DISCOPARTY_TEST_MODE=1" \
+  "DISCOPARTY_TEST_SECURITY_BIN=$FAKE_BIN/security" \
+  "DISCOPARTY_TEST_LAUNCHCTL_BIN=$FAKE_BIN/launchctl" \
+  "DISCOPARTY_TEST_PYTHON_BIN=$FAKE_BIN/python3" \
+  "DISCOPARTY_TEST_EXPECT_REAL_HOME=$TEST_HOME" \
+  "DISCOPARTY_TEST_AUTH_LOGOUT_MARKER=$AUTH_LOGIN_MARKER" \
+  "DISCOPARTY_TEST_AUTH_LOGOUT_LOG=$AUTH_LOGOUT_LOG" \
   "$TEST_REPO/uninstall.sh" --codex --non-interactive \
   >"$TEST_ROOT/uninstall.log"
 
@@ -2275,7 +2275,7 @@ test ! -e "$PLIST"
 test ! -e "$TEST_HOME/.fake-keychain-discord-bot-token-codex"
 test ! -e "$AUTH_LOGIN_MARKER"
 [ "$(grep -c '^logout-configured$' "$AUTH_LOGOUT_LOG")" = "1" ]
-test -e "$TEST_HOME/Library/LaunchAgents/com.threadkeep.discord-gateway-client.plist"
+test -e "$TEST_HOME/Library/LaunchAgents/com.discoparty.discord-gateway-client.plist"
 [ "$(cat "$TEST_HOME/.fake-keychain-discord-bot-token")" = "claude-token" ]
 grep -Fq "Claude was left unchanged" "$TEST_ROOT/uninstall.log"
 
@@ -2283,16 +2283,16 @@ printf '%s\n' logged-in > "$AUTH_LOGIN_MARKER"
 env \
   "HOME=$TEST_HOME" \
   "PATH=$FAKE_BIN:/usr/bin:/bin:/usr/sbin:/sbin" \
-  "THREADKEEP_TEST_LAUNCHCTL_LOG=$LAUNCHCTL_LOG" \
-  "THREADKEEP_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret" \
-  "THREADKEEP_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG" \
-  "THREADKEEP_TEST_MODE=1" \
-  "THREADKEEP_TEST_SECURITY_BIN=$FAKE_BIN/security" \
-  "THREADKEEP_TEST_LAUNCHCTL_BIN=$FAKE_BIN/launchctl" \
-  "THREADKEEP_TEST_PYTHON_BIN=$FAKE_BIN/python3" \
-  "THREADKEEP_TEST_EXPECT_REAL_HOME=$TEST_HOME" \
-  "THREADKEEP_TEST_AUTH_LOGOUT_MARKER=$AUTH_LOGIN_MARKER" \
-  "THREADKEEP_TEST_AUTH_LOGOUT_LOG=$AUTH_LOGOUT_LOG" \
+  "DISCOPARTY_TEST_LAUNCHCTL_LOG=$LAUNCHCTL_LOG" \
+  "DISCOPARTY_TEST_SECRET_PROBE=$FAKE_BIN/assert-no-secret" \
+  "DISCOPARTY_TEST_SECRET_PROBE_LOG=$SECRET_PROBE_LOG" \
+  "DISCOPARTY_TEST_MODE=1" \
+  "DISCOPARTY_TEST_SECURITY_BIN=$FAKE_BIN/security" \
+  "DISCOPARTY_TEST_LAUNCHCTL_BIN=$FAKE_BIN/launchctl" \
+  "DISCOPARTY_TEST_PYTHON_BIN=$FAKE_BIN/python3" \
+  "DISCOPARTY_TEST_EXPECT_REAL_HOME=$TEST_HOME" \
+  "DISCOPARTY_TEST_AUTH_LOGOUT_MARKER=$AUTH_LOGIN_MARKER" \
+  "DISCOPARTY_TEST_AUTH_LOGOUT_LOG=$AUTH_LOGOUT_LOG" \
   "$TEST_REPO/uninstall.sh" --codex --non-interactive \
     --keep-keychain --keep-chatgpt-login \
   >"$TEST_ROOT/uninstall-keep-login.log"

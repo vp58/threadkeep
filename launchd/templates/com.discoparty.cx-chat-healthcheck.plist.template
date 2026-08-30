@@ -7,32 +7,20 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>__PYTHON_BIN__</string>
-        <string>__REPO_ROOT__/discord-gateway/client.py</string>
+        <string>__REPO_ROOT__/launchd/cx-chat-healthcheck.sh</string>
     </array>
+
+    <key>StartInterval</key>
+    <integer>300</integer>
 
     <key>RunAtLoad</key>
     <true/>
 
-    <key>KeepAlive</key>
-    <dict>
-        <key>SuccessfulExit</key>
-        <false/>
-        <key>Crashed</key>
-        <true/>
-    </dict>
-
-    <key>ThrottleInterval</key>
-    <integer>10</integer>
-
     <key>StandardOutPath</key>
-    <string>__REPO_ROOT__/discord-gateway/logs/launchd.stdout.log</string>
+    <string>__REPO_ROOT__/logs/cx-chat-healthcheck.stdout.log</string>
 
     <key>StandardErrorPath</key>
-    <string>__REPO_ROOT__/discord-gateway/logs/launchd.stderr.log</string>
-
-    <key>WorkingDirectory</key>
-    <string>__REPO_ROOT__</string>
+    <string>__REPO_ROOT__/logs/cx-chat-healthcheck.stderr.log</string>
 
     <key>EnvironmentVariables</key>
     <dict>
@@ -40,12 +28,12 @@
         <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
         <key>HOME</key>
         <string>__HOME__</string>
-        <key>PYTHONUNBUFFERED</key>
-        <string>1</string>
-        <key>THREADKEEP_REPO_ROOT</key>
+        <key>DISCOPARTY_REPO_ROOT</key>
         <string>__REPO_ROOT__</string>
-        <key>THREADKEEP_CONFIG</key>
+        <key>DISCOPARTY_CONFIG</key>
         <string>__REPO_ROOT__/config.toml</string>
+        <key>DISCOPARTY_TMUX_SESSION</key>
+        <string>__TMUX_SESSION__</string>
     </dict>
 </dict>
 </plist>

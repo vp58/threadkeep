@@ -19,9 +19,9 @@ drain flow per row:
     mark_dispatched()
     (listener spawns worker, then mark_spawned / mark_done)
 
-The listen-channel id is read from THREADKEEP_LISTEN_CHANNEL_ID (a top-level post
+The listen-channel id is read from DISCOPARTY_LISTEN_CHANNEL_ID (a top-level post
 there becomes a new thread; anything else is a reply into an owned thread or is
-unowned). The default posting username is read from THREADKEEP_DEFAULT_USER
+unowned). The default posting username is read from DISCOPARTY_DEFAULT_USER
 (falls back to "owner").
 """
 from __future__ import annotations

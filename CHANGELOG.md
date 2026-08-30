@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Threadkeep will be documented in this file.
+All notable changes to Disco Party will be documented in this file.
 
 This project follows the spirit of Keep a Changelog and uses semantic versioning once tagged releases begin.
 
@@ -10,10 +10,10 @@ This project follows the spirit of Keep a Changelog and uses semantic versioning
 
 - Optional Codex Discord orchestrator with a dedicated bot, channel, owner-only ingress policy, headless LaunchAgent, official OpenAI App Server client, and read-only local monitor.
 - Isolated Codex `CODEX_HOME`, reviewed config, and separately scoped ChatGPT subscription login through the official macOS Keychain backend, without a manually supplied OpenAI API key or reuse of normal `~/.codex`.
-- Canonical Codex state placement below `~/Library/Application Support/Threadkeep`, with matching installer and runtime ownership, mode, topology, and symlink checks so authentication and rollout state cannot be redirected into another Git checkout or synced working tree.
+- Canonical Codex state placement below `~/Library/Application Support/Discoparty`, with matching installer and runtime ownership, mode, topology, and symlink checks so authentication and rollout state cannot be redirected into another Git checkout or synced working tree.
 - Private immutable Apple Silicon Python venv identified by CPython version, dependency version, and lock hash, with binary-only wheels, installed-distribution verification, a private manifest, and atomic publication.
 - Exact official Codex CLI `0.151.0` native arm64 pin with `gpt-5.6-sol`, OpenAI provider, Ultra reasoning, and fallback disabled.
-- Custom `threadkeep-workspace-only` default with root and temporary-directory denies, agent-tool network off, untrusted project roots, and disabled project config, MCP, apps, web, Browser, Computer Use, hooks, plugins, local automation, skill search, and every non-canonical skill.
+- Custom `discoparty-workspace-only` default with root and temporary-directory denies, agent-tool network off, untrusted project roots, and disabled project config, MCP, apps, web, Browser, Computer Use, hooks, plugins, local automation, skill search, and every non-canonical skill.
 - Exact shared Vault ELI5 and VinayTalks discovery through a validated two-link isolated bridge, complete closure hashing, policy-fingerprint binding, explicit per-turn skill items, and drift checks before and immediately after turn start.
 - Mechanically derived mode `0400` snapshot of the six canonical Vault P0 sections, with source and snapshot hashes bound into policy and revalidated around every Codex turn. Claude validates the same seal at launcher startup and inherits it through listener and subagent prompts.
 - Disabled project-document discovery and rejected administrator configuration requirements in both authority modes, with the optional external `instructions_file` as the only additional instruction source. Trusted file loading rejects hardlinks, symlink components, unstable or writable ancestry, and lexical, canonical, or filesystem-alias overlap with the workspace.
@@ -48,7 +48,7 @@ This project follows the spirit of Keep a Changelog and uses semantic versioning
 
 ### Added
 
-- Public Threadkeep repo with install path, uninstall path, launchd templates, systemd templates, setup docs, architecture docs, security docs, issue templates, and PR template.
+- Public Disco Party repo with install path, uninstall path, launchd templates, systemd templates, setup docs, architecture docs, security docs, issue templates, and PR template.
 - Persistent Discord listener and worker-dispatch pattern extracted from the original private deployment.
 - Discord approval gateway and marker watcher for review-gated outbound sends.
 - Identity persistence hooks for Claude Code listener sessions.

@@ -21,7 +21,7 @@ class CodexAuthLifecycleTests(unittest.TestCase):
         return codex_home
 
     def test_logout_uses_reviewed_binary_and_verifies_logged_out(self):
-        with TemporaryDirectory(prefix=".threadkeep-auth-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-auth-test-", dir=Path.home()) as tmp:
             codex_home = self._codex_home(Path(tmp))
             native = Path("/reviewed/native/codex")
             completed = (
@@ -55,10 +55,10 @@ class CodexAuthLifecycleTests(unittest.TestCase):
                 environment = call.kwargs["env"]
                 self.assertEqual(environment["CODEX_HOME"], str(codex_home))
                 self.assertNotIn("OPENAI_API_KEY", environment)
-                self.assertNotIn("THREADKEEP_CODEX_DISCORD_BOT_TOKEN", environment)
+                self.assertNotIn("DISCOPARTY_CODEX_DISCORD_BOT_TOKEN", environment)
 
     def test_logout_rejects_filesystem_artifact_created_by_cli(self):
-        with TemporaryDirectory(prefix=".threadkeep-auth-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-auth-test-", dir=Path.home()) as tmp:
             codex_home = self._codex_home(Path(tmp))
 
             def create_artifact(*args, **kwargs):
@@ -83,7 +83,7 @@ class CodexAuthLifecycleTests(unittest.TestCase):
                 )
 
     def test_logged_out_check_rejects_ambiguous_status(self):
-        with TemporaryDirectory(prefix=".threadkeep-auth-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-auth-test-", dir=Path.home()) as tmp:
             codex_home = self._codex_home(Path(tmp))
             with (
                 patch(
@@ -112,7 +112,7 @@ class CodexAuthLifecycleTests(unittest.TestCase):
         )
         with (
             patch(
-                "codex_discord_bridge.config.Config.from_threadkeep",
+                "codex_discord_bridge.config.Config.from_discoparty",
                 return_value=config,
             ),
             patch(

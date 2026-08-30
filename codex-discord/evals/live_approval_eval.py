@@ -43,11 +43,11 @@ def assert_no_action(ledger: Path, stage: str) -> None:
 
 
 async def main() -> None:
-    config = Config.from_threadkeep()
+    config = Config.from_discoparty()
     instructions_sha256 = config.instructions_digest()
     account_binding = config.account_binding()
     with TemporaryDirectory(
-        prefix=".threadkeep-approval-eval-", dir=config.working_directory
+        prefix=".discoparty-approval-eval-", dir=config.working_directory
     ) as tmp:
         workspace = Path(tmp)
         recorder = workspace / "approval-recorder.py"

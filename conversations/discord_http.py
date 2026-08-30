@@ -14,7 +14,7 @@ from typing import Any
 
 
 API_ROOT = "https://discord.com/api/v10"
-USER_AGENT = "Threadkeep/0.2"
+USER_AGENT = "Discoparty/0.2"
 
 
 class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -198,7 +198,7 @@ def json_request(
 
 
 def multipart_message(payload: dict[str, Any], files: list[Path]) -> tuple[bytes, str]:
-    boundary = "threadkeep-" + secrets.token_hex(24)
+    boundary = "discoparty-" + secrets.token_hex(24)
     chunks: list[bytes] = []
 
     def field(name: str, value: bytes, content_type: str | None = None, filename: str | None = None) -> None:

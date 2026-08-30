@@ -1,30 +1,30 @@
 #!/usr/bin/env bash
 # cx-chat-healthcheck.sh
 #
-# Checks if the Threadkeep listener tmux session is alive. If not, restarts
+# Checks if the Disco Party listener tmux session is alive. If not, restarts
 # it by launching cx-launcher.sh (which resolves the bot token from Keychain
 # and execs Claude Code with the Discord plugin attached), then sends the
 # bootstrap prompt that loads the cx-chat identity. Posts a notification to
 # the configured errors channel on action.
 #
-# Runs under launchd via com.threadkeep.cx-chat-healthcheck.plist or directly
+# Runs under launchd via com.discoparty.cx-chat-healthcheck.plist or directly
 # from cron.
 
 set -u
 
-REPO_ROOT="${THREADKEEP_REPO_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
-CONFIG="${THREADKEEP_CONFIG:-$REPO_ROOT/config.toml}"
-SESSION="${THREADKEEP_TMUX_SESSION:-threadkeep-chat}"
+REPO_ROOT="${DISCOPARTY_REPO_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
+CONFIG="${DISCOPARTY_CONFIG:-$REPO_ROOT/config.toml}"
+SESSION="${DISCOPARTY_TMUX_SESSION:-discoparty-chat}"
 SEND="$REPO_ROOT/approval/send_message.py"
 LAUNCHER="$REPO_ROOT/cx-launcher.sh"
 PERMISSION_VERIFIER="$REPO_ROOT/conversations/discord_permissions.py"
-READINESS_TOKEN="THREADKEEP_LISTENER_READY_v1_7f29c4b1"
+READINESS_TOKEN="DISCOPARTY_LISTENER_READY_v1_7f29c4b1"
 CLAUDE_BIN="$HOME/.local/share/claude/versions/2.1.251"
 
 PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
 export PATH
-export THREADKEEP_CONFIG="$CONFIG"
-export THREADKEEP_REPO_ROOT="$REPO_ROOT"
+export DISCOPARTY_CONFIG="$CONFIG"
+export DISCOPARTY_REPO_ROOT="$REPO_ROOT"
 
 eval "$(
 PYTHONPATH="$REPO_ROOT/conversations" python3 - <<'PY'
@@ -155,7 +155,7 @@ verify_discord_permissions() {
     LOGNAME="$(/usr/bin/id -un)" \
     PATH="$PATH" \
     LANG="C" \
-    THREADKEEP_CONFIG="$CONFIG" \
+    DISCOPARTY_CONFIG="$CONFIG" \
     PYTHONPATH="$REPO_ROOT/conversations" \
     python3 "$PERMISSION_VERIFIER" verify \
     >>"$LOG" 2>&1
@@ -169,7 +169,7 @@ enforce_discord_permissions() {
     if [ -f "$marker" ]; then
       rm -f "$marker"
       log "Discord permission verification recovered"
-      post_alert "Threadkeep Discord least-privilege verification recovered on $(hostname) at $(ts)."
+      post_alert "Disco Party Discord least-privilege verification recovered on $(hostname) at $(ts)."
     fi
     return 0
   fi
@@ -192,9 +192,9 @@ enforce_discord_permissions() {
   fi
   if [ "$first_fault" = "1" ]; then
     if [ "$stop_failed" = "1" ]; then
-      post_alert "Threadkeep Discord permission verification failed on $(hostname) at $(ts), but the existing $SESSION session did not match the reviewed process identity and was not killed. Manual intervention is required."
+      post_alert "Disco Party Discord permission verification failed on $(hostname) at $(ts), but the existing $SESSION session did not match the reviewed process identity and was not killed. Manual intervention is required."
     else
-      post_alert "Threadkeep stopped $SESSION on $(hostname) at $(ts) because Discord least-privilege verification failed. It will remain stopped until verification passes."
+      post_alert "Disco Party stopped $SESSION on $(hostname) at $(ts) because Discord least-privilege verification failed. It will remain stopped until verification passes."
     fi
   fi
   return 1
@@ -223,7 +223,7 @@ start_cx_chat() {
   log "tmux session started; sleeping 15s for Claude Code init"
   sleep 15
 
-  local prompt="Run the Threadkeep readiness check defined in your pinned system prompt. Reply only with its exact token."
+  local prompt="Run the Disco Party readiness check defined in your pinned system prompt. Reply only with its exact token."
   tmux send-keys -t "=$SESSION:0.0" "$prompt" Enter
   sleep 2
   tmux send-keys -t "=$SESSION:0.0" Enter
@@ -260,14 +260,14 @@ main() {
     sleep 5
     if listener_protocol_is_ready; then
       log "Restart successful"
-      post_alert "Threadkeep $SESSION tmux session was missing on $(hostname); restarted automatically at $(ts)."
+      post_alert "Disco Party $SESSION tmux session was missing on $(hostname); restarted automatically at $(ts)."
     else
       log "Restart claimed success but session is not present. Manual intervention needed."
-      post_alert "Threadkeep $SESSION restart FAILED on $(hostname) at $(ts). Manual fix required."
+      post_alert "Disco Party $SESSION restart FAILED on $(hostname) at $(ts). Manual fix required."
     fi
   else
     log "start_cx_chat returned non-zero"
-    post_alert "Threadkeep $SESSION restart attempt failed on $(hostname) at $(ts). Check healthcheck log."
+    post_alert "Disco Party $SESSION restart attempt failed on $(hostname) at $(ts). Check healthcheck log."
   fi
 }
 

@@ -119,7 +119,7 @@ class ApprovalBinding:
 
 def setup_logging() -> logging.Logger:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
-    logger = logging.getLogger("threadkeep-router")
+    logger = logging.getLogger("discoparty-router")
     if logger.handlers:
         return logger
     logger.setLevel(logging.INFO)
@@ -153,7 +153,7 @@ def discord_request(
         headers={
             "Authorization": f"Bot {token}",
             "Content-Type": "application/json",
-            "User-Agent": "ThreadkeepRouter/0.1",
+            "User-Agent": "Disco PartyRouter/0.1",
         },
         method=method,
     )

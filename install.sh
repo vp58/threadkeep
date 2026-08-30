@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # install.sh
 #
-# Threadkeep macOS install script. Idempotent. Re-running detects an existing
+# Disco Party macOS install script. Idempotent. Re-running detects an existing
 # install and offers reinstall, skip, or uninstall.
 #
 # What it does:
 #   1. Verifies prerequisites (Python, Claude Code, Bun, websockets, tmux, jq).
-#   2. Prompts for or accepts THREADKEEP_REPO_ROOT (defaults to script dir).
+#   2. Prompts for or accepts DISCOPARTY_REPO_ROOT (defaults to script dir).
 #   3. Resolves the Discord bot token (env var, stdin prompt, or existing
 #      Keychain entry) and stores it in the macOS Keychain under
-#      service "threadkeep-secret", account "discord-bot-token".
+#      service "discoparty-secret", account "discord-bot-token".
 #   4. Generates config.toml from config.example.toml with substituted values
 #      (chat_channel_id, errors_channel_id, owner_user_id, timezone).
 #   5. Renders the launchd plist templates with __REPO_ROOT__, __HOME__,
@@ -24,12 +24,12 @@
 #   --scratch              Don't actually bootstrap launchd agents or start
 #                          tmux. Useful for testing the wiring in a sandbox.
 #   --label-prefix PREFIX  Override the launchd label prefix. Default:
-#                          "com.threadkeep". install.sh writes plists named
+#                          "com.discoparty". install.sh writes plists named
 #                          PREFIX.cx-chat-healthcheck.plist etc. Used together
 #                          with --scratch to avoid colliding with a real
 #                          install on the same machine.
 #   --tmux-session NAME    Override the tmux session name. Default:
-#                          "threadkeep-chat". Should match anything you
+#                          "discoparty-chat". Should match anything you
 #                          configure in your client.
 #   --non-interactive      Don't prompt. Fail if required values aren't
 #                          already in the process environment.
@@ -42,13 +42,13 @@
 #
 # Env vars honored as defaults for prompts:
 #   DISCORD_BOT_TOKEN
-#   THREADKEEP_REPO_ROOT
-#   THREADKEEP_LISTEN_CHANNEL_ID
-#   THREADKEEP_ERRORS_CHANNEL_ID
-#   THREADKEEP_OWNER_USER_ID
-#   THREADKEEP_TIMEZONE
-#   THREADKEEP_LEGACY_MAINTENANCE_PHRASE
-#   THREADKEEP_LEGACY_QUARANTINE_ACK
+#   DISCOPARTY_REPO_ROOT
+#   DISCOPARTY_LISTEN_CHANNEL_ID
+#   DISCOPARTY_ERRORS_CHANNEL_ID
+#   DISCOPARTY_OWNER_USER_ID
+#   DISCOPARTY_TIMEZONE
+#   DISCOPARTY_LEGACY_MAINTENANCE_PHRASE
+#   DISCOPARTY_LEGACY_QUARANTINE_ACK
 #
 # Secret-bearing environment files are never loaded. A caller may provide the
 # Discord token in this installer's transient process environment; it is stored
@@ -58,8 +58,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_REPO_ROOT="$SCRIPT_DIR"
-LABEL_PREFIX="com.threadkeep"
-TMUX_SESSION="threadkeep-chat"
+LABEL_PREFIX="com.discoparty"
+TMUX_SESSION="discoparty-chat"
 SCRATCH=0
 NON_INTERACTIVE=0
 REINSTALL=0
@@ -73,7 +73,7 @@ LEGACY_QUARANTINE_ACK=""
 LEGACY_QUEUE_PLAN_SHA256=""
 CONVERSATIONS_DIR=""
 
-KEYCHAIN_SERVICE="threadkeep-secret"
+KEYCHAIN_SERVICE="discoparty-secret"
 KEYCHAIN_ACCOUNT="discord-bot-token"
 CLAUDE_BIN="$HOME/.local/share/claude/versions/2.1.251"
 BUN_BIN="/opt/homebrew/bin/bun"
@@ -117,7 +117,7 @@ collect_takeover_authorization() {
     "The replacement tmux session must differ from cx-chat."
   local expected="I HAVE STOPPED POSTING AND AUTHORIZE LEGACY CLAUDE TAKEOVER"
   if [ "$NON_INTERACTIVE" = "1" ]; then
-    LEGACY_MAINTENANCE_PHRASE="${THREADKEEP_LEGACY_MAINTENANCE_PHRASE:-}"
+    LEGACY_MAINTENANCE_PHRASE="${DISCOPARTY_LEGACY_MAINTENANCE_PHRASE:-}"
   else
     yellow "  Legacy takeover enters a maintenance window and stops all five com.thesystem jobs."
     yellow "  Legacy claimed or dispatched rows with unprovable worker effects will be quarantined, never replayed."
@@ -157,7 +157,7 @@ print(
     "Legacy queue contains $hard_blockers hard blocker(s), including $spawned spawned row(s). Inspect the read-only plan and reconcile them manually before takeover."
   yellow "  Unresolved manual-review rows: $claimed claimed without a new operation ledger, $dispatched dispatched."
   if [ "$NON_INTERACTIVE" = "1" ]; then
-    LEGACY_QUARANTINE_ACK="${THREADKEEP_LEGACY_QUARANTINE_ACK:-}"
+    LEGACY_QUARANTINE_ACK="${DISCOPARTY_LEGACY_QUARANTINE_ACK:-}"
   else
     read -r -p "  Type $acknowledgment: " LEGACY_QUARANTINE_ACK
   fi
@@ -217,8 +217,8 @@ prepare_legacy_takeover() {
         --plist-dir "$HOME/Library/LaunchAgents" \
         --legacy-approval-root "$WORKSPACE_ROOT/x_System/Assistant/discord-gateway" \
         --new-gateway-state "$REPO_ROOT/discord-gateway/state/gateway.json" \
-        --root-channel "$THREADKEEP_LISTEN_CHANNEL_ID" \
-        --owner-user-id "$THREADKEEP_OWNER_USER_ID" \
+        --root-channel "$DISCOPARTY_LISTEN_CHANNEL_ID" \
+        --owner-user-id "$DISCOPARTY_OWNER_USER_ID" \
         --new-label-prefix "$LABEL_PREFIX" \
         --new-session "$TMUX_SESSION" \
         --repo-root "$REPO_ROOT" \
@@ -468,7 +468,7 @@ def keychain_binding(name: str, default: str) -> str:
         raise SystemExit(f"enabled Codex provider has a non-string {name}")
     return value
 
-service = keychain_binding("keychain_service", "threadkeep-secret")
+service = keychain_binding("keychain_service", "discoparty-secret")
 account = keychain_binding("keychain_account", "discord-bot-token-codex")
 for label, value in (("keychain_service", service), ("keychain_account", account)):
     if (
@@ -523,9 +523,9 @@ PY
 
 validate_cross_provider_channels() {
   [ "${CROSS_CODEX_ENABLED:-0}" = "1" ] || return 0
-  [ "$THREADKEEP_LISTEN_CHANNEL_ID" != "$CROSS_CODEX_CHANNEL_ID" ] || \
+  [ "$DISCOPARTY_LISTEN_CHANNEL_ID" != "$CROSS_CODEX_CHANNEL_ID" ] || \
     die "Claude and Codex must use different Discord channels."
-  [ "$THREADKEEP_ERRORS_CHANNEL_ID" != "$CROSS_CODEX_CHANNEL_ID" ] || \
+  [ "$DISCOPARTY_ERRORS_CHANNEL_ID" != "$CROSS_CODEX_CHANNEL_ID" ] || \
     die "The Claude errors channel must not be the Codex channel."
 }
 
@@ -577,7 +577,7 @@ codex_provider_is_running() {
     die "launchctl is required to verify the enabled Codex provider state."
   local label
   for label in \
-    com.threadkeep.codex-discord-bridge \
+    com.discoparty.codex-discord-bridge \
     com.thesystem.codex-discord-bridge; do
     if env -u DISCORD_BOT_TOKEN "$launchctl_bin" \
       print "gui/$UID/$label" >/dev/null 2>&1; then
@@ -590,12 +590,12 @@ codex_provider_is_running() {
 validate_running_codex_routing() {
   codex_provider_is_running || return 0
   local unchanged=1
-  [ "$CROSS_OLD_CLAUDE_GUILD_ID" = "$THREADKEEP_DISCORD_GUILD_ID" ] || unchanged=0
-  [ "$CROSS_OLD_CLAUDE_CHAT_CHANNEL_ID" = "$THREADKEEP_LISTEN_CHANNEL_ID" ] || unchanged=0
-  [ "$CROSS_OLD_CLAUDE_ERRORS_CHANNEL_ID" = "$THREADKEEP_ERRORS_CHANNEL_ID" ] || unchanged=0
-  [ "$CROSS_OLD_CLAUDE_OWNER_USER_ID" = "$THREADKEEP_OWNER_USER_ID" ] || unchanged=0
-  [ "$CROSS_OLD_CLAUDE_BOT_USER_ID" = "$THREADKEEP_DISCORD_BOT_USER_ID" ] || unchanged=0
-  [ "$CROSS_OLD_CLAUDE_APPLICATION_ID" = "$THREADKEEP_DISCORD_APPLICATION_ID" ] || unchanged=0
+  [ "$CROSS_OLD_CLAUDE_GUILD_ID" = "$DISCOPARTY_DISCORD_GUILD_ID" ] || unchanged=0
+  [ "$CROSS_OLD_CLAUDE_CHAT_CHANNEL_ID" = "$DISCOPARTY_LISTEN_CHANNEL_ID" ] || unchanged=0
+  [ "$CROSS_OLD_CLAUDE_ERRORS_CHANNEL_ID" = "$DISCOPARTY_ERRORS_CHANNEL_ID" ] || unchanged=0
+  [ "$CROSS_OLD_CLAUDE_OWNER_USER_ID" = "$DISCOPARTY_OWNER_USER_ID" ] || unchanged=0
+  [ "$CROSS_OLD_CLAUDE_BOT_USER_ID" = "$DISCOPARTY_DISCORD_BOT_USER_ID" ] || unchanged=0
+  [ "$CROSS_OLD_CLAUDE_APPLICATION_ID" = "$DISCOPARTY_DISCORD_APPLICATION_ID" ] || unchanged=0
   [ "$unchanged" = "1" ] || die \
     "Codex is running; stop it before changing Claude Discord routing or identity."
 }
@@ -610,13 +610,13 @@ preflight_discord_identity() {
       PYTHONPATH="$REPO_ROOT/conversations" \
       python3 "$REPO_ROOT/conversations/discord_identity.py" \
         --token-stdin \
-        --chat-channel-id "$THREADKEEP_LISTEN_CHANNEL_ID" \
-        --errors-channel-id "$THREADKEEP_ERRORS_CHANNEL_ID"
+        --chat-channel-id "$DISCOPARTY_LISTEN_CHANNEL_ID" \
+        --errors-channel-id "$DISCOPARTY_ERRORS_CHANNEL_ID"
   )" || die "Claude Discord identity preflight failed."
   IFS=$'\t' read -r \
-    THREADKEEP_DISCORD_GUILD_ID \
-    THREADKEEP_DISCORD_BOT_USER_ID \
-    THREADKEEP_DISCORD_APPLICATION_ID <<< "$(
+    DISCOPARTY_DISCORD_GUILD_ID \
+    DISCOPARTY_DISCORD_BOT_USER_ID \
+    DISCOPARTY_DISCORD_APPLICATION_ID <<< "$(
       printf '%s' "$identity" | \
         env -u DISCORD_BOT_TOKEN PYTHONDONTWRITEBYTECODE=1 python3 -c '
 import json, sys
@@ -624,9 +624,9 @@ value = json.load(sys.stdin)
 print(value["guild_id"], value["bot_user_id"], value["application_id"], sep="\t")
 '
     )"
-  export THREADKEEP_DISCORD_GUILD_ID
-  export THREADKEEP_DISCORD_BOT_USER_ID
-  export THREADKEEP_DISCORD_APPLICATION_ID
+  export DISCOPARTY_DISCORD_GUILD_ID
+  export DISCOPARTY_DISCORD_BOT_USER_ID
+  export DISCOPARTY_DISCORD_APPLICATION_ID
   green "  Discord principal and guild are pinned."
 }
 
@@ -635,11 +635,11 @@ preflight_discord_permissions() {
   local -a permission_args=(
     verify
     --token-stdin
-    --guild-id "$THREADKEEP_DISCORD_GUILD_ID"
-    --chat-channel-id "$THREADKEEP_LISTEN_CHANNEL_ID"
-    --errors-channel-id "$THREADKEEP_ERRORS_CHANNEL_ID"
-    --bot-user-id "$THREADKEEP_DISCORD_BOT_USER_ID"
-    --application-id "$THREADKEEP_DISCORD_APPLICATION_ID"
+    --guild-id "$DISCOPARTY_DISCORD_GUILD_ID"
+    --chat-channel-id "$DISCOPARTY_LISTEN_CHANNEL_ID"
+    --errors-channel-id "$DISCOPARTY_ERRORS_CHANNEL_ID"
+    --bot-user-id "$DISCOPARTY_DISCORD_BOT_USER_ID"
+    --application-id "$DISCOPARTY_DISCORD_APPLICATION_ID"
     --conversations-dir "$CONVERSATIONS_DIR"
   )
   case "$state_mode" in
@@ -710,13 +710,13 @@ PY
 )" || die "Existing config.toml has an invalid Claude authority mode."
   fi
 
-  if [ "${THREADKEEP_CLAUDE_FULL_AUTHORITY:-}" = "1" ]; then
+  if [ "${DISCOPARTY_CLAUDE_FULL_AUTHORITY:-}" = "1" ]; then
     CLAUDE_FULL_AUTHORITY=1
   elif [ "$existing_mode" = "true" ]; then
     CLAUDE_FULL_AUTHORITY=1
     say "  Preserving the existing explicit full-local-authority setting."
   elif [ "$NON_INTERACTIVE" = "1" ]; then
-    die "Claude listener requires explicit full local authority. Set THREADKEEP_CLAUDE_FULL_AUTHORITY=1 after reviewing the risk."
+    die "Claude listener requires explicit full local authority. Set DISCOPARTY_CLAUDE_FULL_AUTHORITY=1 after reviewing the risk."
   else
     yellow "  The Claude listener executes owner-approved Discord work with full access to this Mac account."
     yellow "  Discord content can therefore cause local file, process, and application actions."
@@ -794,19 +794,19 @@ workspace_root = "$WORKSPACE_ROOT"
 conversations_dir = "$CONVERSATIONS_DIR"
 
 [discord]
-guild_id = "$THREADKEEP_DISCORD_GUILD_ID"
-chat_channel_id = "$THREADKEEP_LISTEN_CHANNEL_ID"
-errors_channel_id = "$THREADKEEP_ERRORS_CHANNEL_ID"
-owner_user_id = "$THREADKEEP_OWNER_USER_ID"
-bot_user_id = "$THREADKEEP_DISCORD_BOT_USER_ID"
-application_id = "$THREADKEEP_DISCORD_APPLICATION_ID"
+guild_id = "$DISCOPARTY_DISCORD_GUILD_ID"
+chat_channel_id = "$DISCOPARTY_LISTEN_CHANNEL_ID"
+errors_channel_id = "$DISCOPARTY_ERRORS_CHANNEL_ID"
+owner_user_id = "$DISCOPARTY_OWNER_USER_ID"
+bot_user_id = "$DISCOPARTY_DISCORD_BOT_USER_ID"
+application_id = "$DISCOPARTY_DISCORD_APPLICATION_ID"
 token_env_var = "DISCORD_BOT_TOKEN"
 keychain_service = "$KEYCHAIN_SERVICE"
 keychain_account = "$KEYCHAIN_ACCOUNT"
-plugin_state_dir = "$HOME/Library/Application Support/Threadkeep/claude-discord"
+plugin_state_dir = "$HOME/Library/Application Support/Discoparty/claude-discord"
 
 [runtime]
-timezone = "${THREADKEEP_TIMEZONE:-UTC}"
+timezone = "${DISCOPARTY_TIMEZONE:-UTC}"
 max_messages_per_minute = 5
 max_messages_per_hour = 30
 max_concurrent_workers = 3
@@ -842,7 +842,7 @@ install_claude_discord_access() {
 }
 
 install_claude_vault_policy() {
-  local state_root="$HOME/Library/Application Support/Threadkeep/claude-discord"
+  local state_root="$HOME/Library/Application Support/Discoparty/claude-discord"
   blue "Sealing the canonical Vault P0 policy for the Claude listener and workers."
   env -u DISCORD_BOT_TOKEN \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -884,13 +884,13 @@ install_plists() {
   python_bin="$(command -v python3)"
 
   render_plist \
-    "$REPO_ROOT/launchd/templates/com.threadkeep.cx-chat-healthcheck.plist.template" \
+    "$REPO_ROOT/launchd/templates/com.discoparty.cx-chat-healthcheck.plist.template" \
     "$LABEL_PREFIX.cx-chat-healthcheck" \
     "$agents_dir/$LABEL_PREFIX.cx-chat-healthcheck.plist" \
     "$python_bin"
 
   render_plist \
-    "$REPO_ROOT/launchd/templates/com.threadkeep.discord-gateway-client.plist.template" \
+    "$REPO_ROOT/launchd/templates/com.discoparty.discord-gateway-client.plist.template" \
     "$LABEL_PREFIX.discord-gateway-client" \
     "$agents_dir/$LABEL_PREFIX.discord-gateway-client.plist" \
     "$python_bin"
@@ -963,9 +963,9 @@ start_listener_session() {
   fi
   blue "Starting and proving listener readiness for '$TMUX_SESSION'."
   [ -x "$REPO_ROOT/cx-launcher.sh" ] || die "cx-launcher.sh is not executable."
-  THREADKEEP_REPO_ROOT="$REPO_ROOT" \
-    THREADKEEP_CONFIG="$REPO_ROOT/config.toml" \
-    THREADKEEP_TMUX_SESSION="$TMUX_SESSION" \
+  DISCOPARTY_REPO_ROOT="$REPO_ROOT" \
+    DISCOPARTY_CONFIG="$REPO_ROOT/config.toml" \
+    DISCOPARTY_TMUX_SESSION="$TMUX_SESSION" \
     /bin/bash "$REPO_ROOT/launchd/cx-chat-healthcheck.sh" || \
     die "Claude listener did not prove exact session and protocol readiness."
   green "  Listener session '$TMUX_SESSION' is running with the pinned protocol."
@@ -984,7 +984,7 @@ detect_existing() {
 }
 
 assert_no_legacy_claude_footprint() {
-  # The pre-Threadkeep deployment consumes the same Discord events through
+  # The pre-Disco Party deployment consumes the same Discord events through
   # com.thesystem jobs and the cx-chat tmux listener. Never install a second
   # consumer beside it; migration requires its own staged rollback procedure.
   local -a found=()
@@ -1021,7 +1021,7 @@ assert_no_legacy_claude_footprint() {
     esac
   done < <(/bin/ps -axo pid=,command= 2>/dev/null || true)
   [ "${#found[@]}" = "0" ] || die \
-    "Legacy Claude Discord footprint detected (${found[*]}). Stop and migrate it explicitly before installing Threadkeep; automatic takeover is disabled."
+    "Legacy Claude Discord footprint detected (${found[*]}). Stop and migrate it explicitly before installing Disco Party; automatic takeover is disabled."
 }
 
 # ----- main -----
@@ -1031,11 +1031,11 @@ main() {
   # it through every prerequisite, parser, launchctl, or plugin child.
   export -n DISCORD_BOT_TOKEN 2>/dev/null || true
 
-  say "Threadkeep installer (label prefix: $LABEL_PREFIX, scratch: $SCRATCH)"
+  say "Disco Party installer (label prefix: $LABEL_PREFIX, scratch: $SCRATCH)"
   say
 
-  if [ -e "$SCRIPT_DIR/.threadkeep.env" ] || [ -L "$SCRIPT_DIR/.threadkeep.env" ]; then
-    die ".threadkeep.env is not loaded because credential files are forbidden. Move non-secret defaults to the process environment and store bot tokens only in Keychain."
+  if [ -e "$SCRIPT_DIR/.discoparty.env" ] || [ -L "$SCRIPT_DIR/.discoparty.env" ]; then
+    die ".discoparty.env is not loaded because credential files are forbidden. Move non-secret defaults to the process environment and store bot tokens only in Keychain."
   fi
 
   if detect_existing && [ "$REINSTALL" != "1" ]; then
@@ -1065,25 +1065,25 @@ main() {
   confirm_config_write_and_authority
   load_cross_provider_state
 
-  local default_workspace="$HOME/.threadkeep"
+  local default_workspace="$HOME/.discoparty"
   if [ -d "$HOME/TheSystem/x_System/Skills" ]; then
     default_workspace="$HOME/TheSystem"
   fi
   prompt WORKSPACE_ROOT "Shared Vault root" "$default_workspace"
   WORKSPACE_ROOT="${WORKSPACE_ROOT/#~/$HOME}"
   if [ "$TAKE_OVER_LEGACY" = "1" ]; then
-    CONVERSATIONS_DIR="${THREADKEEP_CONVERSATIONS_DIR:-$WORKSPACE_ROOT/x_System/Assistant/conversations}"
+    CONVERSATIONS_DIR="${DISCOPARTY_CONVERSATIONS_DIR:-$WORKSPACE_ROOT/x_System/Assistant/conversations}"
   else
-    CONVERSATIONS_DIR="${THREADKEEP_CONVERSATIONS_DIR:-$WORKSPACE_ROOT/conversations}"
+    CONVERSATIONS_DIR="${DISCOPARTY_CONVERSATIONS_DIR:-$WORKSPACE_ROOT/conversations}"
   fi
   CONVERSATIONS_DIR="${CONVERSATIONS_DIR/#~/$HOME}"
   preflight_shared_skills
   collect_quarantine_authorization
 
-  prompt THREADKEEP_LISTEN_CHANNEL_ID "Discord listen channel id" ""
-  prompt THREADKEEP_ERRORS_CHANNEL_ID "Discord errors channel id" "${THREADKEEP_LISTEN_CHANNEL_ID:-}"
-  prompt THREADKEEP_OWNER_USER_ID "Discord owner user id (your user id)" ""
-  prompt THREADKEEP_TIMEZONE "Timezone (IANA name)" "America/New_York"
+  prompt DISCOPARTY_LISTEN_CHANNEL_ID "Discord listen channel id" ""
+  prompt DISCOPARTY_ERRORS_CHANNEL_ID "Discord errors channel id" "${DISCOPARTY_LISTEN_CHANNEL_ID:-}"
+  prompt DISCOPARTY_OWNER_USER_ID "Discord owner user id (your user id)" ""
+  prompt DISCOPARTY_TIMEZONE "Timezone (IANA name)" "America/New_York"
   validate_cross_provider_channels
 
   resolve_bot_token

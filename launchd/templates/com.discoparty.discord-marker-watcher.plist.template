@@ -42,9 +42,9 @@
         <string>__HOME__</string>
         <key>PYTHONUNBUFFERED</key>
         <string>1</string>
-        <key>THREADKEEP_REPO_ROOT</key>
+        <key>DISCOPARTY_REPO_ROOT</key>
         <string>__REPO_ROOT__</string>
-        <key>THREADKEEP_CONFIG</key>
+        <key>DISCOPARTY_CONFIG</key>
         <string>__REPO_ROOT__/config.toml</string>
     </dict>
 </dict>

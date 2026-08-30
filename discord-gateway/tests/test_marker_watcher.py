@@ -31,11 +31,11 @@ CHANNEL_ID = "555555555555555555"
 MESSAGE_ID = "666666666666666666"
 INTERACTION_ID = "777777777777777777"
 
-os.environ.setdefault("THREADKEEP_CONFIG", str(HERE.parent.parent / "config.example.toml"))
-os.environ.setdefault("THREADKEEP_OWNER_USER_ID", OWNER_ID)
-os.environ.setdefault("THREADKEEP_DISCORD_APPLICATION_ID", APPLICATION_ID)
-os.environ.setdefault("THREADKEEP_DISCORD_GUILD_ID", GUILD_ID)
-os.environ.setdefault("THREADKEEP_DISCORD_BOT_USER_ID", BOT_USER_ID)
+os.environ.setdefault("DISCOPARTY_CONFIG", str(HERE.parent.parent / "config.example.toml"))
+os.environ.setdefault("DISCOPARTY_OWNER_USER_ID", OWNER_ID)
+os.environ.setdefault("DISCOPARTY_DISCORD_APPLICATION_ID", APPLICATION_ID)
+os.environ.setdefault("DISCOPARTY_DISCORD_GUILD_ID", GUILD_ID)
+os.environ.setdefault("DISCOPARTY_DISCORD_BOT_USER_ID", BOT_USER_ID)
 
 
 def load_watcher_module():

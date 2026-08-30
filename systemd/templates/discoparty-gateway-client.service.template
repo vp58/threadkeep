@@ -1,12 +1,12 @@
 [Unit]
-Description=Threadkeep Discord Gateway Client
+Description=Disco Party Discord Gateway Client
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-Environment="THREADKEEP_REPO_ROOT=__REPO_ROOT__"
-Environment="THREADKEEP_CONFIG=__REPO_ROOT__/config.toml"
+Environment="DISCOPARTY_REPO_ROOT=__REPO_ROOT__"
+Environment="DISCOPARTY_CONFIG=__REPO_ROOT__/config.toml"
 Environment="PYTHONUNBUFFERED=1"
 WorkingDirectory=__REPO_ROOT__
 ExecStart=__PYTHON_BIN__ __REPO_ROOT__/discord-gateway/client.py

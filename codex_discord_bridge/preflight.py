@@ -113,10 +113,10 @@ def main() -> int:
     checks: dict[str, str] = {}
     warnings: dict[str, str] = {}
     try:
-        config = Config.from_threadkeep()
-        checks["threadkeep_codex_config"] = "pass"
+        config = Config.from_discoparty()
+        checks["discoparty_codex_config"] = "pass"
     except Exception as exc:
-        checks["threadkeep_codex_config"] = f"block: {type(exc).__name__}"
+        checks["discoparty_codex_config"] = f"block: {type(exc).__name__}"
         print(json.dumps({"checks": checks, "warnings": warnings}, indent=2))
         return 2
     try:
@@ -135,7 +135,7 @@ def main() -> int:
         )
     codex = config.codex_bin
     worker_home = config.codex_home.parent
-    tmp_dir = config.working_directory / ".threadkeep-tmp"
+    tmp_dir = config.working_directory / ".discoparty-tmp"
     try:
         require_chatgpt_login(
             codex,

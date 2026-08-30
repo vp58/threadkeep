@@ -470,7 +470,7 @@ async def supervise_service_tasks(
 
 
 async def run() -> None:
-    config = Config.from_threadkeep()
+    config = Config.from_discoparty()
     runtime_lock = acquire_runtime_lock(config.state_dir / "bridge.lock")
     ready_path: Path | None = None
     try:

@@ -217,7 +217,7 @@ class ConfigTests(unittest.TestCase):
         workspace.mkdir(exist_ok=True)
         state_dir = (
             Path(tmp)
-            / "Library/Application Support/Threadkeep/codex-discord"
+            / "Library/Application Support/Discoparty/codex-discord"
         )
         state_dir.mkdir(parents=True, mode=0o700, exist_ok=True)
         state_dir.chmod(0o700)
@@ -237,7 +237,7 @@ class ConfigTests(unittest.TestCase):
             full_computer_access_accepted=False,
             instructions_file=None,
             shared_skills_root=skills_root,
-            keychain_service="threadkeep-secret",
+            keychain_service="discoparty-secret",
             keychain_account="discord-bot-token-codex",
             max_messages_per_minute=5,
             max_messages_per_hour=30,
@@ -257,27 +257,27 @@ class ConfigTests(unittest.TestCase):
         )
 
     def test_shared_config_builds_separate_codex_provider(self):
-        with TemporaryDirectory(prefix=".threadkeep-config-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-config-test-", dir=Path.home()) as tmp:
             source = self.source(tmp)
             with (
                 patch("conversations.config.CONFIG", source),
                 patch("codex_discord_bridge.config._canonical_user_home", return_value=Path(tmp)),
             ):
-                config = Config.from_threadkeep()
+                config = Config.from_discoparty()
             self.assertEqual(config.channel_id, "2")
             self.assertEqual(config.working_directory, Path(tmp) / "workspace")
             self.assertEqual(
                 config.codex_home,
                 (
                     Path(tmp)
-                    / "Library/Application Support/Threadkeep/codex-discord/home/.codex"
+                    / "Library/Application Support/Discoparty/codex-discord/home/.codex"
                 ).resolve(),
             )
             self.assertEqual(config.sandbox_mode, "workspace-write")
             self.assertEqual(config.max_concurrent_workers, 3)
 
     def test_codex_worker_pool_range_is_fail_closed(self):
-        with TemporaryDirectory(prefix=".threadkeep-config-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-config-test-", dir=Path.home()) as tmp:
             for value in (0, 5, True):
                 with self.subTest(value=value):
                     source = self.source(tmp, max_concurrent_workers=value)
@@ -291,7 +291,7 @@ class ConfigTests(unittest.TestCase):
                             ValueError, "max_concurrent_workers"
                         ),
                     ):
-                        Config.from_threadkeep()
+                        Config.from_discoparty()
 
     def test_codex_worker_env_override_is_separate_from_claude_runtime(self):
         from conversations.config import load_config
@@ -300,9 +300,9 @@ class ConfigTests(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
-                "THREADKEEP_CONFIG": str(config_path),
-                "THREADKEEP_CODEX_ENABLED": "true",
-                "THREADKEEP_CODEX_MAX_CONCURRENT_WORKERS": "4",
+                "DISCOPARTY_CONFIG": str(config_path),
+                "DISCOPARTY_CODEX_ENABLED": "true",
+                "DISCOPARTY_CODEX_MAX_CONCURRENT_WORKERS": "4",
             },
             clear=True,
         ):
@@ -311,17 +311,17 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(loaded.runtime.max_concurrent_workers, 3)
 
     def test_codex_cannot_share_the_claude_channel(self):
-        with TemporaryDirectory(prefix=".threadkeep-config-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-config-test-", dir=Path.home()) as tmp:
             source = self.source(tmp, channel_id="1")
             with (
                 patch("conversations.config.CONFIG", source),
                 patch("codex_discord_bridge.config._canonical_user_home", return_value=Path(tmp)),
                 self.assertRaises(ValueError),
             ):
-                Config.from_threadkeep()
+                Config.from_discoparty()
 
     def test_full_access_requires_explicit_acceptance(self):
-        with TemporaryDirectory(prefix=".threadkeep-config-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-config-test-", dir=Path.home()) as tmp:
             source = self.source(
                 tmp,
                 sandbox_mode="danger-full-access",
@@ -332,13 +332,13 @@ class ConfigTests(unittest.TestCase):
                 patch("codex_discord_bridge.config._canonical_user_home", return_value=Path(tmp)),
                 self.assertRaises(RuntimeError),
             ):
-                Config.from_threadkeep()
+                Config.from_discoparty()
             source.codex.full_computer_access_accepted = True
             with (
                 patch("conversations.config.CONFIG", source),
                 patch("codex_discord_bridge.config._canonical_user_home", return_value=Path(tmp)),
             ):
-                config = Config.from_threadkeep()
+                config = Config.from_discoparty()
             self.assertEqual(config.sandbox_mode, "danger-full-access")
             self.assertEqual(
                 config.instructions_file,
@@ -352,7 +352,7 @@ class ConfigTests(unittest.TestCase):
             )
 
     def test_full_access_keeps_public_output_policy_for_public_channel_trust(self):
-        with TemporaryDirectory(prefix=".threadkeep-config-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-config-test-", dir=Path.home()) as tmp:
             source = self.source(
                 tmp,
                 sandbox_mode="danger-full-access",
@@ -363,12 +363,12 @@ class ConfigTests(unittest.TestCase):
                 "codex_discord_bridge.config._canonical_user_home",
                 return_value=Path(tmp),
             ):
-                config = Config.from_threadkeep()
+                config = Config.from_discoparty()
             self.assertEqual(config.sandbox_mode, "danger-full-access")
             self.assertEqual(config.channel_trust, "public")
 
     def test_control_plane_must_not_overlap_workspace(self):
-        with TemporaryDirectory(prefix=".threadkeep-config-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-config-test-", dir=Path.home()) as tmp:
             workspace = Path(tmp) / "workspace"
             workspace.mkdir()
             source = self.source(tmp, state_dir=workspace / "state")
@@ -377,10 +377,10 @@ class ConfigTests(unittest.TestCase):
                 patch("codex_discord_bridge.config._canonical_user_home", return_value=Path(tmp)),
                 self.assertRaises(RuntimeError),
             ):
-                Config.from_threadkeep()
+                Config.from_discoparty()
 
     def test_shared_skill_control_rejects_equal_ancestor_and_descendant_workspaces(self):
-        with TemporaryDirectory(prefix=".threadkeep-config-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-config-test-", dir=Path.home()) as tmp:
             root = Path(tmp)
             for relation in ("equal", "ancestor", "descendant"):
                 with self.subTest(relation=relation):
@@ -401,10 +401,10 @@ class ConfigTests(unittest.TestCase):
                             RuntimeError, "canonical shared Vault skill root"
                         ),
                     ):
-                        Config.from_threadkeep()
+                        Config.from_discoparty()
 
     def test_shared_skill_control_rejects_macos_data_volume_alias_workspace(self):
-        with TemporaryDirectory(prefix=".threadkeep-config-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-config-test-", dir=Path.home()) as tmp:
             root = Path(tmp)
             source = self.source(tmp)
             skills = source.codex.shared_skills_root
@@ -419,10 +419,10 @@ class ConfigTests(unittest.TestCase):
                     RuntimeError, "canonical shared Vault skill root"
                 ),
             ):
-                Config.from_threadkeep()
+                Config.from_discoparty()
 
     def test_runtime_state_must_stay_under_canonical_application_support(self):
-        with TemporaryDirectory(prefix=".threadkeep-config-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-config-test-", dir=Path.home()) as tmp:
             outside = Path(tmp) / "other-state"
             outside.mkdir()
             source = self.source(tmp, state_dir=outside)
@@ -431,12 +431,12 @@ class ConfigTests(unittest.TestCase):
                 patch("codex_discord_bridge.config._canonical_user_home", return_value=Path(tmp)),
                 self.assertRaisesRegex(RuntimeError, "Application Support"),
             ):
-                Config.from_threadkeep()
+                Config.from_discoparty()
 
     def test_runtime_state_rejects_parent_traversal(self):
-        with TemporaryDirectory(prefix=".threadkeep-config-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-config-test-", dir=Path.home()) as tmp:
             root = Path(tmp)
-            approved = root / "Library/Application Support/Threadkeep"
+            approved = root / "Library/Application Support/Discoparty"
             approved.mkdir(parents=True)
             escaped = root / "Library/Application Support/other-state"
             escaped.mkdir()
@@ -447,10 +447,10 @@ class ConfigTests(unittest.TestCase):
                 patch("codex_discord_bridge.config._canonical_user_home", return_value=root),
                 self.assertRaisesRegex(RuntimeError, "traversal"),
             ):
-                Config.from_threadkeep()
+                Config.from_discoparty()
 
     def test_runtime_rejects_writable_or_symlinked_state_ancestry(self):
-        with TemporaryDirectory(prefix=".threadkeep-config-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-config-test-", dir=Path.home()) as tmp:
             root = Path(tmp)
             source = self.source(tmp)
             application_support = root / "Library/Application Support"
@@ -461,13 +461,13 @@ class ConfigTests(unittest.TestCase):
                     patch("codex_discord_bridge.config._canonical_user_home", return_value=root),
                     self.assertRaisesRegex(RuntimeError, "group/world writable"),
                 ):
-                    Config.from_threadkeep()
+                    Config.from_discoparty()
             finally:
                 application_support.chmod(0o755)
 
             target = root / "real-state"
             (target / "state").mkdir(parents=True)
-            link = root / "Library/Application Support/Threadkeep/linked"
+            link = root / "Library/Application Support/Discoparty/linked"
             link.symlink_to(target, target_is_directory=True)
             linked_source = self.source(tmp, state_dir=link / "state")
             with (
@@ -475,10 +475,10 @@ class ConfigTests(unittest.TestCase):
                 patch("codex_discord_bridge.config._canonical_user_home", return_value=root),
                 self.assertRaisesRegex(RuntimeError, "real directories"),
             ):
-                Config.from_threadkeep()
+                Config.from_discoparty()
 
     def test_trusted_instructions_must_not_overlap_workspace(self):
-        with TemporaryDirectory(prefix=".threadkeep-config-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-config-test-", dir=Path.home()) as tmp:
             workspace = Path(tmp) / "workspace"
             workspace.mkdir()
             instructions = workspace / "TRUSTED.md"
@@ -489,10 +489,10 @@ class ConfigTests(unittest.TestCase):
                 patch("codex_discord_bridge.config._canonical_user_home", return_value=Path(tmp)),
                 self.assertRaises(RuntimeError),
             ):
-                Config.from_threadkeep()
+                Config.from_discoparty()
 
     def test_trusted_instructions_reject_lexical_workspace_symlink_escape(self):
-        with TemporaryDirectory(prefix=".threadkeep-config-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-config-test-", dir=Path.home()) as tmp:
             root = Path(tmp).resolve()
             source = self.source(str(root))
             workspace = source.codex.working_directory
@@ -511,17 +511,17 @@ class ConfigTests(unittest.TestCase):
                 patch("codex_discord_bridge.config._canonical_user_home", return_value=root),
                 self.assertRaisesRegex(RuntimeError, "lexically"),
             ):
-                Config.from_threadkeep()
+                Config.from_discoparty()
 
     def test_codex_cannot_use_claude_keychain_account(self):
-        with TemporaryDirectory(prefix=".threadkeep-config-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-config-test-", dir=Path.home()) as tmp:
             source = self.source(tmp, keychain_account="discord-bot-token")
             with (
                 patch("conversations.config.CONFIG", source),
                 patch("codex_discord_bridge.config._canonical_user_home", return_value=Path(tmp)),
                 self.assertRaises(ValueError),
             ):
-                Config.from_threadkeep()
+                Config.from_discoparty()
 
 
 class SharedSkillTests(unittest.TestCase):
@@ -558,7 +558,7 @@ class SharedSkillTests(unittest.TestCase):
         return skills
 
     def test_exact_canonical_skills_are_bound_and_routed_without_normal_turn_bodies(self):
-        with TemporaryDirectory(prefix=".threadkeep-skills-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-skills-test-", dir=Path.home()) as tmp:
             root = Path(tmp)
             skills = self.create_tree(root)
             binding = bind_shared_skills(skills)
@@ -631,7 +631,7 @@ class SharedHookTests(unittest.TestCase):
 
     def test_snapshot_is_private_hermetic_and_contains_only_reviewed_closure(self):
         with TemporaryDirectory(
-            prefix=".threadkeep-hooks-test-", dir=Path.home()
+            prefix=".discoparty-hooks-test-", dir=Path.home()
         ) as tmp:
             root = Path(tmp)
             vault, workspace, codex_home, runtime = self.create_runtime(root)
@@ -669,7 +669,7 @@ class SharedHookTests(unittest.TestCase):
 
     def test_source_snapshot_config_and_metadata_tampering_fail_closed(self):
         with TemporaryDirectory(
-            prefix=".threadkeep-hooks-test-", dir=Path.home()
+            prefix=".discoparty-hooks-test-", dir=Path.home()
         ) as tmp:
             root = Path(tmp)
             vault, workspace, codex_home, runtime = self.create_runtime(root)
@@ -710,7 +710,7 @@ class SharedHookTests(unittest.TestCase):
     def test_snapshot_symlink_and_hardlink_substitution_fail_closed(self):
         for substitution in ("symlink", "hardlink"):
             with self.subTest(substitution=substitution), TemporaryDirectory(
-                prefix=".threadkeep-hooks-test-", dir=Path.home()
+                prefix=".discoparty-hooks-test-", dir=Path.home()
             ) as tmp:
                 root = Path(tmp)
                 vault, _workspace, codex_home, runtime = self.create_runtime(root)
@@ -778,7 +778,7 @@ class VaultPolicyTests(unittest.TestCase):
 
     def test_seal_is_private_read_only_and_revalidation_never_rewrites(self):
         with TemporaryDirectory(
-            prefix=".threadkeep-policy-fingerprint-", dir=Path.home()
+            prefix=".discoparty-policy-fingerprint-", dir=Path.home()
         ) as tmp:
             root = Path(tmp).resolve()
             vault = root / "vault"
@@ -843,7 +843,7 @@ class VaultPolicyTests(unittest.TestCase):
 
     def test_policy_fingerprint_binds_account_and_complete_vault_seal(self):
         with TemporaryDirectory(
-            prefix=".threadkeep-policy-fingerprint-", dir=Path.home()
+            prefix=".discoparty-policy-fingerprint-", dir=Path.home()
         ) as tmp:
             root = Path(tmp).resolve()
             workspace = root / "workspace"
@@ -939,7 +939,7 @@ class VaultPolicyTests(unittest.TestCase):
                 self.assertEqual(select_skills(request), {"skill-finder"})
 
     def test_bridge_contains_only_exact_canonical_links_and_rejects_redirects(self):
-        with TemporaryDirectory(prefix=".threadkeep-skills-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-skills-test-", dir=Path.home()) as tmp:
             root = Path(tmp)
             skills = self.create_tree(root)
             codex_home = root / "state/home/.codex"
@@ -962,7 +962,7 @@ class VaultPolicyTests(unittest.TestCase):
                 validate_skill_bridge(codex_home, binding)
 
     def test_policy_hash_revalidation_blocks_skill_and_reference_tampering(self):
-        with TemporaryDirectory(prefix=".threadkeep-skills-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-skills-test-", dir=Path.home()) as tmp:
             root = Path(tmp)
             skills = self.create_tree(root)
             original = bind_shared_skills(skills)
@@ -971,7 +971,7 @@ class VaultPolicyTests(unittest.TestCase):
                 bind_shared_skills(skills, original.manifest_sha256)
 
     def test_unsafe_paths_symlinks_hardlinks_and_modes_fail_closed(self):
-        with TemporaryDirectory(prefix=".threadkeep-skills-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-skills-test-", dir=Path.home()) as tmp:
             root = Path(tmp)
             skills = self.create_tree(root)
             reference = skills / "eli5/references/visual-design.md"
@@ -1031,9 +1031,9 @@ class CodexPolicyTests(unittest.TestCase):
             "-C",
             str(repository),
             "-c",
-            "user.name=Threadkeep Test",
+            "user.name=Disco Party Test",
             "-c",
-            "user.email=threadkeep@example.invalid",
+            "user.email=discoparty@example.invalid",
             "commit",
             "--allow-empty",
             "-m",
@@ -1076,7 +1076,7 @@ class CodexPolicyTests(unittest.TestCase):
 
     def test_safe_and_full_thread_configs_are_exact(self):
         expected_profile = {
-            "description": "Threadkeep workspace-only policy",
+            "description": "Disco Party workspace-only policy",
             "extends": ":workspace",
             "filesystem": {
                 ":root": "deny",
@@ -1093,7 +1093,7 @@ class CodexPolicyTests(unittest.TestCase):
             "project_doc_max_bytes": 0,
             "project_doc_fallback_filenames": [],
             "permissions": {
-                "threadkeep-workspace-only": expected_profile,
+                "discoparty-workspace-only": expected_profile,
             },
             "features": {
                 feature: False for feature in CONTROL_PLANE_DISABLED_FEATURES
@@ -1139,7 +1139,7 @@ class CodexPolicyTests(unittest.TestCase):
             project = f"[projects.{json.dumps(str(workspace.resolve()))}]"
             profile = [
                 f"[permissions.{SAFE_PERMISSION_PROFILE}]",
-                'description = "Threadkeep workspace-only policy"',
+                'description = "Disco Party workspace-only policy"',
                 'extends = ":workspace"',
                 "",
                 f"[permissions.{SAFE_PERMISSION_PROFILE}.filesystem]",
@@ -1225,7 +1225,7 @@ class CodexPolicyTests(unittest.TestCase):
         with (
             TemporaryDirectory() as workspace_tmp,
             TemporaryDirectory(
-                prefix=".threadkeep-policy-test-", dir=Path.home()
+                prefix=".discoparty-policy-test-", dir=Path.home()
             ) as state_tmp,
         ):
             workspace = Path(workspace_tmp) / "workspace"
@@ -1249,7 +1249,7 @@ class CodexPolicyTests(unittest.TestCase):
                 validate_isolated_config(codex_home, workspace, True)
 
     def test_isolated_config_rejects_parent_traversal(self):
-        with TemporaryDirectory(prefix=".threadkeep-policy-test-", dir=Path.home()) as tmp:
+        with TemporaryDirectory(prefix=".discoparty-policy-test-", dir=Path.home()) as tmp:
             base = Path(tmp)
             allowed = base / "state"
             allowed.mkdir()
@@ -2256,7 +2256,7 @@ class AuthTests(unittest.TestCase):
             env=child_environment(
                 Path("/isolated"),
                 codex_home=Path("/auth/.codex"),
-                tmp_dir=Path("/workspace/.threadkeep-tmp"),
+                tmp_dir=Path("/workspace/.discoparty-tmp"),
             )
             self.assertNotIn("OPENAI_API_KEY",env); self.assertNotIn("DISCORD_TOKEN",env); self.assertNotIn("KEEP",env)
             self.assertEqual(
@@ -2264,7 +2264,7 @@ class AuthTests(unittest.TestCase):
                 str(Path(pwd.getpwuid(os.getuid()).pw_dir).resolve()),
             )
             self.assertEqual(env["CODEX_HOME"], "/auth/.codex")
-            self.assertEqual(env["TMPDIR"], "/workspace/.threadkeep-tmp")
+            self.assertEqual(env["TMPDIR"], "/workspace/.discoparty-tmp")
             self.assertEqual(env["LANG"], "en_US.UTF-8")
             self.assertEqual(env["USER"], env["LOGNAME"])
             server = CodexAppServer(Path("codex"), Path("/tmp/unused"))
@@ -2379,14 +2379,14 @@ class AuthTests(unittest.TestCase):
                 run.assert_not_called()
 
     @unittest.skipUnless(
-        os.environ.get("THREADKEEP_LIVE_CODEX_COMPAT") == "1",
-        "set THREADKEEP_LIVE_CODEX_COMPAT=1 for the installed Apple M5 Max compatibility canary",
+        os.environ.get("DISCOPARTY_LIVE_CODEX_COMPAT") == "1",
+        "set DISCOPARTY_LIVE_CODEX_COMPAT=1 for the installed Apple M5 Max compatibility canary",
     )
     def test_installed_official_experimental_schema_matches_reviewed_surface(self):
         # The production provider never uses the user's ordinary ~/.codex.
         # Keep the opt-in canary faithful to that boundary so a normal 0755
         # user config directory does not make the documented live check fail.
-        with TemporaryDirectory(prefix="threadkeep-live-schema-") as tmp:
+        with TemporaryDirectory(prefix="discoparty-live-schema-") as tmp:
             worker_home = Path(tmp).resolve()
             codex_home = worker_home / ".codex"
             runtime_tmp = worker_home / "tmp"
@@ -3033,7 +3033,7 @@ class AppServerTests(unittest.TestCase):
     def test_appserver_attests_exact_sealed_user_hooks(self):
         async def run():
             with TemporaryDirectory(
-                prefix=".threadkeep-appserver-hooks-", dir=Path.home()
+                prefix=".discoparty-appserver-hooks-", dir=Path.home()
             ) as tmp:
                 root = Path(tmp)
                 workspace = root / "workspace"
@@ -3110,7 +3110,7 @@ class AppServerTests(unittest.TestCase):
     def test_appserver_discovers_only_the_exact_canonical_shared_skills(self):
         async def run():
             with TemporaryDirectory(
-                prefix=".threadkeep-appserver-skills-", dir=Path.home()
+                prefix=".discoparty-appserver-skills-", dir=Path.home()
             ) as tmp:
                 root = Path(tmp)
                 workspace = root / "workspace"
@@ -3157,7 +3157,7 @@ class AppServerTests(unittest.TestCase):
     def test_turn_injects_relevant_skill_items_and_rechecks_hash_before_running(self):
         async def run():
             with TemporaryDirectory(
-                prefix=".threadkeep-appserver-skills-", dir=Path.home()
+                prefix=".discoparty-appserver-skills-", dir=Path.home()
             ) as tmp:
                 root = Path(tmp)
                 workspace = root / "workspace"
@@ -3260,7 +3260,7 @@ class AppServerTests(unittest.TestCase):
     def test_turn_requires_successful_hook_events_before_local_tools(self):
         async def run():
             with TemporaryDirectory(
-                prefix=".threadkeep-appserver-hooks-", dir=Path.home()
+                prefix=".discoparty-appserver-hooks-", dir=Path.home()
             ) as tmp:
                 root = Path(tmp)
                 workspace = root / "workspace"
@@ -3694,7 +3694,7 @@ class AppServerTests(unittest.TestCase):
                         "default_permissions": SAFE_PERMISSION_PROFILE,
                         "permissions": {
                             SAFE_PERMISSION_PROFILE: {
-                                "description": "Threadkeep workspace-only policy",
+                                "description": "Disco Party workspace-only policy",
                                 "extends": ":workspace",
                                 "filesystem": {
                                     ":minimal": "read",
@@ -4191,7 +4191,7 @@ class DiscordIOTests(unittest.TestCase):
             patch.dict(
                 os.environ,
                 {
-                    "THREADKEEP_CODEX_DISCORD_BOT_TOKEN": "poisoned.env.token",
+                    "DISCOPARTY_CODEX_DISCORD_BOT_TOKEN": "poisoned.env.token",
                     "OPENAI_API_KEY": "must-not-reach-security",
                     "HTTPS_PROXY": "http://must-not-reach-security",
                 },
@@ -4216,20 +4216,20 @@ class DiscordIOTests(unittest.TestCase):
             set(keyword["env"]),
             {"HOME", "USER", "LOGNAME", "PATH", "LANG"},
         )
-        self.assertNotIn("THREADKEEP_CODEX_DISCORD_BOT_TOKEN", keyword["env"])
+        self.assertNotIn("DISCOPARTY_CODEX_DISCORD_BOT_TOKEN", keyword["env"])
         self.assertNotIn("OPENAI_API_KEY", keyword["env"])
         self.assertNotIn("HTTPS_PROXY", keyword["env"])
 
     def test_codex_discord_token_rejects_malformed_keychain_value(self):
         completed = SimpleNamespace(
             returncode=0,
-            stdout="THREADKEEP_CODEX_DISCORD_BOT_TOKEN=fallback\n",
+            stdout="DISCOPARTY_CODEX_DISCORD_BOT_TOKEN=fallback\n",
             stderr="",
         )
         with (
             patch.dict(
                 os.environ,
-                {"THREADKEEP_CODEX_DISCORD_BOT_TOKEN": "A" * 100},
+                {"DISCOPARTY_CODEX_DISCORD_BOT_TOKEN": "A" * 100},
             ),
             patch(
                 "codex_discord_bridge.discord_io.subprocess.run",

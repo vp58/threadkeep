@@ -38,7 +38,7 @@ def _compact(
 ) -> str:
     raw = public_safe_output(
         str(text),
-        agent_name="Threadkeep monitor",
+        agent_name="Disco Party monitor",
         channel_trust=channel_trust,
     )
     cleaned = " ".join(_terminal_safe(raw).split())
@@ -163,7 +163,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Read-only local monitor for the Codex Discord bridge")
     parser.add_argument("--once", action="store_true")
     args = parser.parse_args()
-    config = Config.from_threadkeep()
+    config = Config.from_discoparty()
     path = config.state_dir / "jobs.sqlite3"
     while True:
         output = render(

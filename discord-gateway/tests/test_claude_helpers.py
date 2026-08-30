@@ -13,13 +13,13 @@ from types import SimpleNamespace
 from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-os.environ.setdefault("THREADKEEP_CONFIG", str(REPO_ROOT / "config.example.toml"))
-os.environ.setdefault("THREADKEEP_OWNER_USER_ID", "111111111111111111")
-os.environ.setdefault("THREADKEEP_DISCORD_APPLICATION_ID", "222222222222222222")
-os.environ.setdefault("THREADKEEP_DISCORD_BOT_USER_ID", "333333333333333333")
-os.environ.setdefault("THREADKEEP_DISCORD_GUILD_ID", "444444444444444444")
-os.environ.setdefault("THREADKEEP_LISTEN_CHANNEL_ID", "555555555555555555")
-os.environ.setdefault("THREADKEEP_ERRORS_CHANNEL_ID", "666666666666666666")
+os.environ.setdefault("DISCOPARTY_CONFIG", str(REPO_ROOT / "config.example.toml"))
+os.environ.setdefault("DISCOPARTY_OWNER_USER_ID", "111111111111111111")
+os.environ.setdefault("DISCOPARTY_DISCORD_APPLICATION_ID", "222222222222222222")
+os.environ.setdefault("DISCOPARTY_DISCORD_BOT_USER_ID", "333333333333333333")
+os.environ.setdefault("DISCOPARTY_DISCORD_GUILD_ID", "444444444444444444")
+os.environ.setdefault("DISCOPARTY_LISTEN_CHANNEL_ID", "555555555555555555")
+os.environ.setdefault("DISCOPARTY_ERRORS_CHANNEL_ID", "666666666666666666")
 sys.path.insert(0, str(REPO_ROOT / "conversations"))
 sys.path.insert(0, str(REPO_ROOT / "approval"))
 
@@ -64,7 +64,7 @@ class ClaudeKeychainCredentialTests(unittest.TestCase):
         )
         self.config = SimpleNamespace(
             discord=SimpleNamespace(
-                keychain_service="threadkeep-secret",
+                keychain_service="discoparty-secret",
                 keychain_account="discord-bot-token",
                 token_env_var="DISCORD_BOT_TOKEN",
             )
@@ -258,7 +258,7 @@ class ClaudeStateDirectoryTests(unittest.TestCase):
             self.home
             / "Library"
             / "Application Support"
-            / "Threadkeep"
+            / "Discoparty"
             / "claude-discord"
         )
         self.config = SimpleNamespace(
@@ -301,7 +301,7 @@ class ClaudeStateDirectoryTests(unittest.TestCase):
             discord_access._private_directory_descriptor(),
         ):
             pass
-        self.assertFalse((outside / "Threadkeep").exists())
+        self.assertFalse((outside / "Discoparty").exists())
 
 
 class ExecIntercept(Exception):
@@ -332,8 +332,8 @@ class ClaudeCredentialExecTests(unittest.TestCase):
             "LANG": "en_US.UTF-8",
             "LC_ALL": "en_US.UTF-8",
             "TERM": "xterm-256color",
-            "THREADKEEP_REPO_ROOT": str(REPO_ROOT),
-            "THREADKEEP_CONFIG": str(REPO_ROOT / "config.toml"),
+            "DISCOPARTY_REPO_ROOT": str(REPO_ROOT),
+            "DISCOPARTY_CONFIG": str(REPO_ROOT / "config.toml"),
             "PYTHONPATH": str(REPO_ROOT / "conversations"),
         }
         self.config = SimpleNamespace(
@@ -374,18 +374,18 @@ class ClaudeCredentialExecTests(unittest.TestCase):
     def test_execve_receives_keychain_token_only_in_final_environment(self) -> None:
         events: list[str] = []
         policy_environment = {
-            "THREADKEEP_VAULT_ROOT": str(self.workspace),
-            "THREADKEEP_VAULT_POLICY_BINDING": '{"version":1}',
-            "THREADKEEP_VAULT_POLICY_SNAPSHOT": str(
+            "DISCOPARTY_VAULT_ROOT": str(self.workspace),
+            "DISCOPARTY_VAULT_POLICY_BINDING": '{"version":1}',
+            "DISCOPARTY_VAULT_POLICY_SNAPSHOT": str(
                 self.state / "policy/vault-p0.md"
             ),
-            "THREADKEEP_VAULT_POLICY_SNAPSHOT_SHA256": "a" * 64,
-            "THREADKEEP_VAULT_POLICY_SOURCE_SHA256": "b" * 64,
-            "THREADKEEP_VAULT_POLICY_PROMPT": str(
+            "DISCOPARTY_VAULT_POLICY_SNAPSHOT_SHA256": "a" * 64,
+            "DISCOPARTY_VAULT_POLICY_SOURCE_SHA256": "b" * 64,
+            "DISCOPARTY_VAULT_POLICY_PROMPT": str(
                 self.state / "policy/claude-listener-system.md"
             ),
-            "THREADKEEP_VAULT_POLICY_PROMPT_SHA256": "c" * 64,
-            "THREADKEEP_POLICY_BOOTSTRAP_WORKSPACE": str(
+            "DISCOPARTY_VAULT_POLICY_PROMPT_SHA256": "c" * 64,
+            "DISCOPARTY_POLICY_BOOTSTRAP_WORKSPACE": str(
                 REPO_ROOT / "cx-chat-listener"
             ),
         }
@@ -453,7 +453,7 @@ class ClaudeCredentialExecTests(unittest.TestCase):
         self.assertNotIn("PYTHONPATH", environment)
         self.assertNotIn("ANTHROPIC_API_KEY", environment)
         self.assertEqual(
-            environment["THREADKEEP_VAULT_POLICY_BINDING"], '{"version":1}'
+            environment["DISCOPARTY_VAULT_POLICY_BINDING"], '{"version":1}'
         )
         self.assertEqual(events[-3:], ["vault-policy", "token", "exec"])
         self.assertFalse((self.state / ".env").exists())
@@ -513,7 +513,7 @@ class ClaudeDestinationTests(unittest.TestCase):
                 discord_destination.lib, "thread_to_session", return_value=None
             ),
             mock.patch.object(discord_destination, "json_request") as request,
-            self.assertRaisesRegex(RuntimeError, "not a registered Threadkeep thread"),
+            self.assertRaisesRegex(RuntimeError, "not a registered Disco Party thread"),
         ):
             discord_destination.validate_destination("token", THREAD_ID)
         request.assert_not_called()

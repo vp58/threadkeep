@@ -41,12 +41,12 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: OS, Python version, Discord plugin version, Threadkeep commit sha.
+      description: OS, Python version, Discord plugin version, Disco Party commit sha.
       placeholder: |
         OS: macOS 26.4 (Tahoe)
         Python: 3.14.3
         Discord plugin: 0.x.y
-        Threadkeep commit: abc1234
+        Disco Party commit: abc1234
     validations:
       required: true
   - type: textarea

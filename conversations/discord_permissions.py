@@ -70,7 +70,7 @@ FORBIDDEN_CHANNEL_PERMISSION_BITS = {
 }
 
 # Anthropic's official Discord plugin documents the first six permissions.
-# Threadkeep additionally creates public conversation threads.
+# Disco Party additionally creates public conversation threads.
 CHAT_REQUIRED_PERMISSION_BITS = {
     "ADD_REACTIONS": ADD_REACTIONS,
     "VIEW_CHANNEL": VIEW_CHANNEL,
@@ -390,16 +390,16 @@ def _conversation_binding(
     raw = _stable_private_read(
         path,
         MAX_CONVERSATION_BYTES,
-        "Threadkeep conversation registration",
+        "Disco Party conversation registration",
         allow_legacy_readonly=allow_legacy_readonly,
     )
     try:
         text = raw.decode("utf-8")
     except UnicodeError as exc:
-        raise RuntimeError("Threadkeep conversation registration is not valid UTF-8") from exc
+        raise RuntimeError("Disco Party conversation registration is not valid UTF-8") from exc
     lines = text.splitlines()
     if not lines or lines[0] != "---":
-        raise RuntimeError("Threadkeep conversation registration lacks frontmatter")
+        raise RuntimeError("Disco Party conversation registration lacks frontmatter")
     values: dict[str, str | None] = {}
     for line in lines[1:257]:
         if line == "---":
@@ -413,7 +413,7 @@ def _conversation_binding(
         key, raw = line.split(":", 1)
         if key in {"claude_session_id", "discord_thread_id", "discord_channel_id"}:
             values[key] = _unquote_scalar(raw)
-    raise RuntimeError("Threadkeep conversation frontmatter is not bounded")
+    raise RuntimeError("Disco Party conversation frontmatter is not bounded")
 
 
 def _stable_private_read(
@@ -561,24 +561,24 @@ def harden_registered_state(conversations_dir: Path) -> dict[str, int]:
     requested.mkdir(parents=True, exist_ok=True, mode=0o700)
     root = requested.resolve(strict=True)
     changed_directories = int(
-        _harden_private_directory(root, "Threadkeep conversations directory")
+        _harden_private_directory(root, "Disco Party conversations directory")
     )
     changed_files = 0
     candidates: list[tuple[Path, str]] = []
     for name in ("_registry.json", "INDEX.md"):
         path = root / name
         if path.exists() or path.is_symlink():
-            candidates.append((path, f"Threadkeep {name}"))
+            candidates.append((path, f"Disco Party {name}"))
     for folder_name in ("active", "archived", "state"):
         folder = root / folder_name
         if not folder.exists() and not folder.is_symlink():
             continue
         changed_directories += int(
-            _harden_private_directory(folder, f"Threadkeep {folder_name} directory")
+            _harden_private_directory(folder, f"Disco Party {folder_name} directory")
         )
         pattern = "*.md" if folder_name != "state" else "*"
         for path in sorted(folder.glob(pattern)):
-            candidates.append((path, f"Threadkeep {folder_name} state file"))
+            candidates.append((path, f"Disco Party {folder_name} state file"))
     for path, label in candidates:
         changed_files += int(_harden_private_file(path, label))
     return {"directories": changed_directories, "files": changed_files}
@@ -605,9 +605,9 @@ def load_registered_threads(
         try:
             folder_metadata = os.lstat(folder)
         except OSError as exc:
-            raise RuntimeError("Threadkeep conversation directory cannot be inspected") from exc
+            raise RuntimeError("Disco Party conversation directory cannot be inspected") from exc
         if stat.S_ISLNK(folder_metadata.st_mode) or not stat.S_ISDIR(folder_metadata.st_mode):
-            raise RuntimeError("Threadkeep conversation directory is malformed")
+            raise RuntimeError("Disco Party conversation directory is malformed")
         for path in sorted(folder.glob("*.md")):
             session_id, thread_id, channel_id = _conversation_binding(
                 path, allow_legacy_readonly=allow_legacy_readonly
@@ -616,66 +616,66 @@ def load_registered_threads(
                 continue
             session_id = session_id or path.stem
             if not SAFE_SESSION_ID.fullmatch(session_id) or session_id != path.stem:
-                raise RuntimeError("Threadkeep conversation session binding is malformed")
+                raise RuntimeError("Disco Party conversation session binding is malformed")
             thread_id = _snowflake(thread_id, "registered Discord thread id")
             if _snowflake(channel_id, "registered Discord channel id") != chat_channel_id:
                 raise RuntimeError("Registered Discord thread belongs to a different root")
             if thread_id in file_bindings:
-                raise RuntimeError("Threadkeep conversation files duplicate a Discord thread")
+                raise RuntimeError("Disco Party conversation files duplicate a Discord thread")
             file_bindings[thread_id] = session_id
 
     if not registry_path.exists() and not registry_path.is_symlink():
         if file_bindings:
-            raise RuntimeError("Threadkeep registry is missing registered conversations")
+            raise RuntimeError("Disco Party registry is missing registered conversations")
         return set()
     raw = _stable_private_read(
         registry_path,
         MAX_REGISTRY_BYTES,
-        "Threadkeep registry",
+        "Disco Party registry",
         allow_legacy_readonly=allow_legacy_readonly,
     )
     try:
         registry = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise RuntimeError("Threadkeep registry is not valid JSON") from exc
-    registry = _mapping(registry, "Threadkeep registry")
+        raise RuntimeError("Disco Party registry is not valid JSON") from exc
+    registry = _mapping(registry, "Disco Party registry")
     if registry.get("schema_version") != 1:
-        raise RuntimeError("Threadkeep registry schema is not supported")
-    by_thread = _mapping(registry.get("by_thread"), "Threadkeep thread registry")
+        raise RuntimeError("Disco Party registry schema is not supported")
+    by_thread = _mapping(registry.get("by_thread"), "Disco Party thread registry")
     conversations = _mapping(
-        registry.get("conversations"), "Threadkeep conversation registry"
+        registry.get("conversations"), "Disco Party conversation registry"
     )
 
     registered: dict[str, str] = {}
     for raw_thread_id, raw_session_id in by_thread.items():
         thread_id = _snowflake(raw_thread_id, "registered Discord thread id")
         if not isinstance(raw_session_id, str) or not SAFE_SESSION_ID.fullmatch(raw_session_id):
-            raise RuntimeError("Threadkeep thread registry has an invalid session id")
+            raise RuntimeError("Disco Party thread registry has an invalid session id")
         if thread_id in registered:
-            raise RuntimeError("Threadkeep thread registry has a duplicate thread")
+            raise RuntimeError("Disco Party thread registry has a duplicate thread")
         entry = _mapping(
-            conversations.get(raw_session_id), "Threadkeep registered conversation"
+            conversations.get(raw_session_id), "Disco Party registered conversation"
         )
         if _snowflake(entry.get("thread_id"), "conversation thread id") != thread_id:
-            raise RuntimeError("Threadkeep registry thread binding is inconsistent")
+            raise RuntimeError("Disco Party registry thread binding is inconsistent")
         if _snowflake(entry.get("channel_id"), "conversation channel id") != chat_channel_id:
-            raise RuntimeError("Threadkeep registry conversation has a foreign channel")
+            raise RuntimeError("Disco Party registry conversation has a foreign channel")
         registered[thread_id] = raw_session_id
 
     for raw_session_id, raw_entry in conversations.items():
         if not isinstance(raw_session_id, str) or not SAFE_SESSION_ID.fullmatch(raw_session_id):
-            raise RuntimeError("Threadkeep conversation registry has an invalid session id")
-        entry = _mapping(raw_entry, "Threadkeep conversation registry entry")
+            raise RuntimeError("Disco Party conversation registry has an invalid session id")
+        entry = _mapping(raw_entry, "Disco Party conversation registry entry")
         if entry.get("thread_id") is None:
             continue
         thread_id = _snowflake(entry.get("thread_id"), "conversation thread id")
         if registered.get(thread_id) != raw_session_id:
-            raise RuntimeError("Threadkeep conversation is missing its thread index")
+            raise RuntimeError("Disco Party conversation is missing its thread index")
         if _snowflake(entry.get("channel_id"), "conversation channel id") != chat_channel_id:
-            raise RuntimeError("Threadkeep registry conversation has a foreign channel")
+            raise RuntimeError("Disco Party registry conversation has a foreign channel")
 
     if registered != file_bindings:
-        raise RuntimeError("Threadkeep registry and conversation files disagree")
+        raise RuntimeError("Disco Party registry and conversation files disagree")
     return set(registered)
 
 

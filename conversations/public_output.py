@@ -129,7 +129,7 @@ def contains_sensitive_data(text: str) -> bool:
 def public_safe_output(
     text: str,
     *,
-    agent_name: str = "Threadkeep",
+    agent_name: str = "Disco Party",
     channel_trust: str = "public",
 ) -> str:
     """Redact for a declared audience while preserving the useful response.

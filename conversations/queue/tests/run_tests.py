@@ -60,18 +60,18 @@ def check(cond: bool, msg: str) -> None:
 def _env(ws: Path) -> dict:
     conv = ws / "conversations"
     e = dict(os.environ)
-    e["THREADKEEP_VAULT_ROOT"] = str(ws)
-    e["THREADKEEP_CONVERSATIONS_DIR"] = str(conv)
-    e["THREADKEEP_DISCORD_SCRIPTS"] = str(FAKE_DISCORD)
-    e["THREADKEEP_MQ_DB"] = str(conv / "state" / "mq.sqlite3")
-    e["THREADKEEP_TEST_CALLLOG"] = str(ws / "calls.jsonl")
-    e["THREADKEEP_LISTEN_CHANNEL_ID"] = CHAT_CHANNEL
+    e["DISCOPARTY_VAULT_ROOT"] = str(ws)
+    e["DISCOPARTY_CONVERSATIONS_DIR"] = str(conv)
+    e["DISCOPARTY_DISCORD_SCRIPTS"] = str(FAKE_DISCORD)
+    e["DISCOPARTY_MQ_DB"] = str(conv / "state" / "mq.sqlite3")
+    e["DISCOPARTY_TEST_CALLLOG"] = str(ws / "calls.jsonl")
+    e["DISCOPARTY_LISTEN_CHANNEL_ID"] = CHAT_CHANNEL
     return e
 
 
 def _setup_workspace() -> Path:
     """Create an isolated workspace skeleton with empty active/archived dirs."""
-    d = Path(tempfile.mkdtemp(prefix="threadkeep-test-"))
+    d = Path(tempfile.mkdtemp(prefix="discoparty-test-"))
     conv = d / "conversations"
     (conv / "active").mkdir(parents=True)
     (conv / "archived").mkdir(parents=True)
@@ -205,12 +205,12 @@ def _set_inprocess_env(ws: Path) -> None:
     """For tests that import the modules in-process, set the same env the
     subprocess fakes need so any shell-outs (react/send) hit the fakes + calllog."""
     conv = ws / "conversations"
-    os.environ["THREADKEEP_VAULT_ROOT"] = str(ws)
-    os.environ["THREADKEEP_CONVERSATIONS_DIR"] = str(conv)
-    os.environ["THREADKEEP_DISCORD_SCRIPTS"] = str(FAKE_DISCORD)
-    os.environ["THREADKEEP_MQ_DB"] = str(conv / "state" / "mq.sqlite3")
-    os.environ["THREADKEEP_TEST_CALLLOG"] = str(ws / "calls.jsonl")
-    os.environ["THREADKEEP_LISTEN_CHANNEL_ID"] = CHAT_CHANNEL
+    os.environ["DISCOPARTY_VAULT_ROOT"] = str(ws)
+    os.environ["DISCOPARTY_CONVERSATIONS_DIR"] = str(conv)
+    os.environ["DISCOPARTY_DISCORD_SCRIPTS"] = str(FAKE_DISCORD)
+    os.environ["DISCOPARTY_MQ_DB"] = str(conv / "state" / "mq.sqlite3")
+    os.environ["DISCOPARTY_TEST_CALLLOG"] = str(ws / "calls.jsonl")
+    os.environ["DISCOPARTY_LISTEN_CHANNEL_ID"] = CHAT_CHANNEL
 
 
 def mq_conn(ws: Path):
@@ -536,10 +536,10 @@ def test_ambiguous_thread_create_reconciles_without_repost():
         v,
         message_id,
         title="Crash safe thread",
-        extra_env={"THREADKEEP_TEST_THREAD_CRASH_AFTER_CREATE": "1"},
+        extra_env={"DISCOPARTY_TEST_THREAD_CRASH_AFTER_CREATE": "1"},
     )
     check(first.returncode != 0, "simulated loss of create acknowledgment fails closed")
-    with sqlite3.connect(_env(v)["THREADKEEP_MQ_DB"]) as db:
+    with sqlite3.connect(_env(v)["DISCOPARTY_MQ_DB"]) as db:
         state = db.execute(
             "SELECT state,thread_id FROM dispatch_operations WHERE message_id=?",
             (message_id,),
@@ -575,10 +575,10 @@ def test_thread_create_crash_before_effect_recovers_once():
         v,
         message_id,
         title="Recover absent thread",
-        extra_env={"THREADKEEP_TEST_THREAD_FAIL_BEFORE_CREATE": "1"},
+        extra_env={"DISCOPARTY_TEST_THREAD_FAIL_BEFORE_CREATE": "1"},
     )
     check(first.returncode != 0, "pre-effect create crash fails closed")
-    with sqlite3.connect(_env(v)["THREADKEEP_MQ_DB"]) as db:
+    with sqlite3.connect(_env(v)["DISCOPARTY_MQ_DB"]) as db:
         state = db.execute(
             "SELECT state,thread_id FROM dispatch_operations WHERE message_id=?",
             (message_id,),
@@ -618,17 +618,17 @@ def test_thread_recovery_state_survives_second_crash():
         v,
         message_id,
         title="Persist recovery evidence",
-        extra_env={"THREADKEEP_TEST_THREAD_FAIL_BEFORE_CREATE": "1"},
+        extra_env={"DISCOPARTY_TEST_THREAD_FAIL_BEFORE_CREATE": "1"},
     )
     check(first.returncode != 0, "initial pre-effect failure was injected")
     second = _dispatch_stdin(
         v,
         message_id,
         title="Persist recovery evidence",
-        extra_env={"THREADKEEP_TEST_THREAD_FAIL_BEFORE_RECOVERY": "1"},
+        extra_env={"DISCOPARTY_TEST_THREAD_FAIL_BEFORE_RECOVERY": "1"},
     )
     check(second.returncode != 0, "crash after absence evidence fails closed")
-    with sqlite3.connect(_env(v)["THREADKEEP_MQ_DB"]) as db:
+    with sqlite3.connect(_env(v)["DISCOPARTY_MQ_DB"]) as db:
         state = db.execute(
             "SELECT state,thread_absence_confirmed_at "
             "FROM dispatch_operations WHERE message_id=?",
@@ -656,7 +656,7 @@ def test_thread_recovery_uses_bounded_exact_probes():
     print("[16] recovery: exact deterministic GET probes precede a retry POST")
     v = _setup_workspace()
     _set_inprocess_env(v)
-    module_name = f"threadkeep_create_thread_test_{os.getpid()}"
+    module_name = f"discoparty_create_thread_test_{os.getpid()}"
     spec = importlib.util.spec_from_file_location(
         module_name, CONVERSATIONS_DIR.parent / "approval" / "create_thread.py"
     )
@@ -718,7 +718,7 @@ def test_concurrent_dispatch_is_single_effect():
     )
     conn.close()
     environment = _env(v)
-    environment["THREADKEEP_TEST_THREAD_CREATE_DELAY"] = "0.4"
+    environment["DISCOPARTY_TEST_THREAD_CREATE_DELAY"] = "0.4"
     payload = json.dumps({"message_id": message_id, "title": "Concurrent dispatch"})
     processes = [
         subprocess.Popen(
@@ -758,7 +758,7 @@ def test_dispatch_tamper_fails_closed():
     first = _dispatch_stdin(v, message_id, title="Immutable dispatch")
     check(first.returncode == 0, "initial immutable dispatch succeeded")
     out = json.loads(first.stdout)
-    with sqlite3.connect(_env(v)["THREADKEEP_MQ_DB"]) as db:
+    with sqlite3.connect(_env(v)["DISCOPARTY_MQ_DB"]) as db:
         db.execute(
             "UPDATE messages SET body='tampered replacement' WHERE message_id=?",
             (message_id,),
@@ -797,9 +797,9 @@ def test_dispatch_lock_and_db_errors_fail_closed():
     db_path.write_bytes(b"not a sqlite database")
     os.chmod(db_path, 0o600)
     os.environ.update({
-        "THREADKEEP_VAULT_ROOT": str(broken),
-        "THREADKEEP_CONVERSATIONS_DIR": str(broken / "conversations"),
-        "THREADKEEP_MQ_DB": str(db_path),
+        "DISCOPARTY_VAULT_ROOT": str(broken),
+        "DISCOPARTY_CONVERSATIONS_DIR": str(broken / "conversations"),
+        "DISCOPARTY_MQ_DB": str(db_path),
     })
     sys.path.insert(0, str(QUEUE_DIR))
     import importlib
@@ -825,7 +825,7 @@ def test_reaction_failure_never_marks_queue_acked():
 
         importlib.reload(_intake)
         message_id = f"1000000000000099{10 + index}"
-        os.environ["THREADKEEP_TEST_REACT_STATUS"] = status
+        os.environ["DISCOPARTY_TEST_REACT_STATUS"] = status
         try:
             failed = _intake.handle_inbound(
                 message_id=message_id,
@@ -835,7 +835,7 @@ def test_reaction_failure_never_marks_queue_acked():
                 conn=conn,
             )
         finally:
-            os.environ.pop("THREADKEEP_TEST_REACT_STATUS", None)
+            os.environ.pop("DISCOPARTY_TEST_REACT_STATUS", None)
         row = mqmod.get(conn, message_id)
         check(not failed["acked"], f"HTTP/exit {status} is not reported as acknowledged")
         check(row["acked_at"] is None, f"HTTP/exit {status} leaves acked_at NULL")
@@ -899,7 +899,7 @@ def test_sensitive_input_is_rejected_before_queue_persistence():
 
 def test_disabled_codex_settings_cannot_break_claude_config():
     print("[22] shared config: disabled Codex validation cannot break Claude startup")
-    with tempfile.TemporaryDirectory(prefix="threadkeep-config-test-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="discoparty-config-test-") as tmp:
         config_path = Path(tmp) / "config.toml"
         config_path.write_text(
             f'''[paths]
@@ -932,12 +932,12 @@ max_database_bytes = 0
         )
         env = dict(os.environ)
         for name in tuple(env):
-            if name.startswith("THREADKEEP_CODEX_"):
+            if name.startswith("DISCOPARTY_CODEX_"):
                 env.pop(name)
-        env["THREADKEEP_CONFIG"] = str(config_path)
-        env["THREADKEEP_CODEX_SANDBOX_MODE"] = "invalid-environment-mode"
-        env["THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED"] = "invalid"
-        env["THREADKEEP_CODEX_MAX_MESSAGES_PER_MINUTE"] = "invalid"
+        env["DISCOPARTY_CONFIG"] = str(config_path)
+        env["DISCOPARTY_CODEX_SANDBOX_MODE"] = "invalid-environment-mode"
+        env["DISCOPARTY_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED"] = "invalid"
+        env["DISCOPARTY_CODEX_MAX_MESSAGES_PER_MINUTE"] = "invalid"
         probe = subprocess.run(
             [
                 sys.executable,

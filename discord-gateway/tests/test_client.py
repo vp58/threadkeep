@@ -27,11 +27,11 @@ from websockets.http11 import Response
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 
-os.environ.setdefault("THREADKEEP_CONFIG", str(HERE.parent.parent / "config.example.toml"))
-os.environ.setdefault("THREADKEEP_OWNER_USER_ID", "111111111111111111")
-os.environ.setdefault("THREADKEEP_DISCORD_APPLICATION_ID", "222222222222222222")
-os.environ.setdefault("THREADKEEP_DISCORD_BOT_USER_ID", "333333333333333333")
-os.environ.setdefault("THREADKEEP_DISCORD_GUILD_ID", "444444444444444444")
+os.environ.setdefault("DISCOPARTY_CONFIG", str(HERE.parent.parent / "config.example.toml"))
+os.environ.setdefault("DISCOPARTY_OWNER_USER_ID", "111111111111111111")
+os.environ.setdefault("DISCOPARTY_DISCORD_APPLICATION_ID", "222222222222222222")
+os.environ.setdefault("DISCOPARTY_DISCORD_BOT_USER_ID", "333333333333333333")
+os.environ.setdefault("DISCOPARTY_DISCORD_GUILD_ID", "444444444444444444")
 
 import client  # noqa: E402
 

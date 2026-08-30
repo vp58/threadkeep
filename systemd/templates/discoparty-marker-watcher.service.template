@@ -1,11 +1,11 @@
 [Unit]
-Description=Threadkeep Discord Marker Watcher
+Description=Disco Party Discord Marker Watcher
 After=network-online.target
 
 [Service]
 Type=simple
-Environment="THREADKEEP_REPO_ROOT=__REPO_ROOT__"
-Environment="THREADKEEP_CONFIG=__REPO_ROOT__/config.toml"
+Environment="DISCOPARTY_REPO_ROOT=__REPO_ROOT__"
+Environment="DISCOPARTY_CONFIG=__REPO_ROOT__/config.toml"
 Environment="PYTHONUNBUFFERED=1"
 WorkingDirectory=__REPO_ROOT__
 ExecStart=__PYTHON_BIN__ __REPO_ROOT__/discord-gateway/marker-watcher.py

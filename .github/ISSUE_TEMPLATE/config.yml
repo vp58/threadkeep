@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Documentation
-    url: https://github.com/vp58/threadkeep#readme
+    url: https://github.com/vp58/discoparty#readme
     about: Read the README and `docs/` before filing an issue. Setup questions are often answered in `docs/SETUP.md`.
   - name: Security disclosure
-    url: https://github.com/vp58/threadkeep/blob/main/docs/SECURITY.md
+    url: https://github.com/vp58/discoparty/blob/main/docs/SECURITY.md
     about: Do not file public issues for security problems. See the disclosure flow.

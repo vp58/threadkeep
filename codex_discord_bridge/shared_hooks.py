@@ -67,7 +67,7 @@ class RuntimeHookBinding:
     def config_text(self) -> str:
         payload = {
             "description": (
-                "Threadkeep sealed canonical Vault guardrails. Hook decisions are "
+                "Disco Party sealed canonical Vault guardrails. Hook decisions are "
                 "defense in depth and are not an outbound authorization boundary."
             ),
             "hooks": {
@@ -191,7 +191,7 @@ def _runtime_definitions(
                 "--detector",
                 runtime_root / names["x_System/Scripts/hook_command_detect.py"],
             ),
-            status_message="Threadkeep command safety guard",
+            status_message="Disco Party command safety guard",
         ),
         HookDefinition(
             matcher="^(Bash|apply_patch)$",
@@ -201,7 +201,7 @@ def _runtime_definitions(
                 "-S",
                 runtime_root / names[".claude/hooks/em-dash-write-validator.py"],
             ),
-            status_message="Threadkeep written text guard",
+            status_message="Disco Party written text guard",
         ),
         HookDefinition(
             matcher="^Bash$",
@@ -210,9 +210,9 @@ def _runtime_definitions(
                 "-I",
                 "-S",
                 runtime_root / names["x_System/Scripts/outbound_send_gate_hook.py"],
-                "--threadkeep-deny-only",
+                "--discoparty-deny-only",
             ),
-            status_message="Threadkeep outbound wrapper deny guard",
+            status_message="Disco Party outbound wrapper deny guard",
         ),
     )
 

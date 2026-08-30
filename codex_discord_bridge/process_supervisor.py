@@ -14,7 +14,7 @@ PS_PATH = Path("/bin/ps")
 
 
 def supervisor_command(command: Sequence[str | os.PathLike[str]]) -> list[str]:
-    """Wrap one command with the stable Threadkeep process-group leader."""
+    """Wrap one command with the stable Disco Party process-group leader."""
 
     child = [os.fspath(argument) for argument in command]
     if not child:
@@ -84,7 +84,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
         return 64
     if os.getpgrp() != os.getpid() or os.getsid(0) != os.getpid():
         sys.stderr.write(
-            "Threadkeep process supervisor requires a dedicated new session\n"
+            "Disco Party process supervisor requires a dedicated new session\n"
         )
         return 70
 
@@ -98,7 +98,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
     try:
         child = subprocess.Popen(argv[1:])
     except OSError:
-        sys.stderr.write("Threadkeep process supervisor could not start its child\n")
+        sys.stderr.write("Disco Party process supervisor could not start its child\n")
         return 126
 
     _detach_standard_streams()

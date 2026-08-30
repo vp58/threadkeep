@@ -141,7 +141,7 @@ class JobStore:
                 )
             schema_version = int(db.execute("PRAGMA user_version").fetchone()[0])
             if schema_version > DELIVERY_ATTEMPT_SCHEMA_VERSION:
-                raise RuntimeError("job store schema is newer than this Threadkeep build")
+                raise RuntimeError("job store schema is newer than this Disco Party build")
             if schema_version < DELIVERY_ATTEMPT_SCHEMA_VERSION:
                 # SQLite DDL is transactional inside an explicit transaction.
                 # The version marker, both columns, and the legacy backfill

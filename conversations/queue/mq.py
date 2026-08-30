@@ -31,8 +31,8 @@ or without this DB present.
 
 State DB resolution order:
     1. explicit db_path argument
-    2. THREADKEEP_MQ_DB env var
-    3. <THREADKEEP_CONVERSATIONS_DIR>/state/mq.sqlite3 when that env is set
+    2. DISCOPARTY_MQ_DB env var
+    3. <DISCOPARTY_CONVERSATIONS_DIR>/state/mq.sqlite3 when that env is set
     4. <repo>/conversations/state/mq.sqlite3 (default)
 """
 from __future__ import annotations
@@ -64,7 +64,7 @@ NONTERMINAL_STATES = ("received", "claimed", "dispatched", "spawned")
 def _db_path(db_path: Optional[str | Path] = None) -> Path:
     if db_path is not None:
         return Path(db_path)
-    env = os.environ.get("THREADKEEP_MQ_DB")
+    env = os.environ.get("DISCOPARTY_MQ_DB")
     if env:
         return Path(env).expanduser()
     base = CONFIG.paths.conversations_dir

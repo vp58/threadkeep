@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Send a message to a Discord channel via the configured bot token.
 
-The token is loaded through Threadkeep's narrow Keychain resolver and is never
+The token is loaded through Disco Party's narrow Keychain resolver and is never
 placed in a curl command line.
 """
 

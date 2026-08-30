@@ -1,6 +1,6 @@
 # Install-generated files
 config.toml
-.threadkeep.env
+.discoparty.env
 .env
 
 # Runtime data
