@@ -32,7 +32,7 @@ Disco Party does not silently merge a Claude session with a Codex session. The h
 
 ## Can I run Claude and Codex at the same time?
 
-Yes. They are separate providers with separate bots, channels, tokens, model logins, runtimes, and state. The recommended public channels are Claude `#chat` and Codex `#chatgpt`. Install Claude with `bash install.sh`, then add Codex with `bash install-codex.sh`.
+Yes. They are separate providers with separate bots, channels, tokens, model logins, runtimes, and state. The recommended public channels are Claude `#claude` and Codex `#chatgpt`. Install Claude with `bash install.sh`, then add Codex with `bash install-codex.sh`.
 
 ## Can both providers use the same Discord bot or channel?
 

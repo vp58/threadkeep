@@ -11,7 +11,7 @@ Leave your Mac running at home. Open Discord from your phone. Ask Claude Code to
 
 Disco Party is an orchestrator for Claude Code and OpenAI Codex. It receives requests, checks who sent them, records them, routes each task to the right local agent, preserves the conversation, and brings the result back to Discord. It does not replace either model. It turns the subscriptions and computers you already have into an always-available system you can operate remotely.
 
-![Disco Party running in Discord: a Claude channel and a ChatGPT channel in the sidebar, each with named conversation threads, an open thread feed in the middle, and the active transcript in the right panel](docs/assets/discoparty-hero.png)
+![Disco Party running in Discord: #claude and #chatgpt channels in the sidebar, each with named conversation threads, an open thread feed in the middle, and the active transcript in the right panel](docs/assets/discoparty-hero.png)
 
 ### What you get
 
@@ -70,11 +70,11 @@ A Discord thread becomes the durable record of one task: what you asked, which a
 
 ### Run a task from your phone
 
-You are away from your desk when a build breaks. Post the error in the Claude channel. Disco Party opens a thread, sends the task to the Mac at home, and returns the investigation to the same thread. Reply with the next instruction without reopening a terminal.
+You are away from your desk when a build breaks. Post the error in `#claude`. Disco Party opens a thread, sends the task to the Mac at home, and returns the investigation to the same thread. Reply with the next instruction without reopening a terminal.
 
 ### Give long work its own lane
 
-Start a repository audit in the Codex channel and a documentation rewrite in the Claude channel. The orchestrator keeps each conversation attached to its own thread and allows independent work to proceed concurrently.
+Start a repository audit in `#chatgpt` and a documentation rewrite in `#claude`. The orchestrator keeps each conversation attached to its own thread and allows independent work to proceed concurrently.
 
 ### Hand work from Claude to Codex
 

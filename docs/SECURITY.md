@@ -47,7 +47,7 @@ Every Discord message, attachment URL, webpage, repository file, terminal output
 | Control | Claude | Codex |
 | --- | --- | --- |
 | Discord bot | Dedicated | Dedicated and installed in exactly one configured server |
-| Discord channel | Dedicated Claude `#chat` listen channel | Dedicated Codex `#chatgpt` channel, different ID required |
+| Discord channel | Dedicated Claude `#claude` listen channel | Dedicated Codex `#chatgpt` channel, different ID required |
 | Bot credential | Keychain `discoparty-secret/discord-bot-token` | Keychain `discoparty-secret/discord-bot-token-codex` |
 | Model credential | Claude Code login | Codex ChatGPT login |
 | Runtime | Interactive tmux listener | Headless LaunchAgent |

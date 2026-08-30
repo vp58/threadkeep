@@ -2,7 +2,7 @@
 
 Date: 2026-08-29
 
-Scope: Claude `#chat` orchestrator, Codex `#chatgpt` orchestrator, shared Discord infrastructure, ChatGPT subscription authentication, requested full-access mode, shared Vault skills, migration, monitoring, and public-channel behavior on an Apple M5 Max Mac.
+Scope: Claude `#claude` orchestrator, Codex `#chatgpt` orchestrator, shared Discord infrastructure, ChatGPT subscription authentication, requested full-access mode, shared Vault skills, migration, monitoring, and public-channel behavior on an Apple M5 Max Mac.
 
 ## Executive decision
 
@@ -12,7 +12,7 @@ Scope: Claude `#chat` orchestrator, Codex `#chatgpt` orchestrator, shared Discor
 
 The design can support the intended topology in two declared authority modes:
 
-- Claude remains on its dedicated bot and public `#chat` channel.
+- Claude remains on its dedicated bot and public `#claude` channel.
 - Codex uses a different dedicated bot and public `#chatgpt` channel.
 - Only the exact configured owner can trigger Codex work.
 - Discord events arrive through persistent Gateway WebSockets. Normal message handling is not a cron poll.
@@ -41,7 +41,7 @@ The board biased toward fail-closed behavior. Unknown identities, permissions, c
 ```text
 PUBLIC DISCORD SERVER
 
-#chat                                      #chatgpt
+#claude                                      #chatgpt
   |                                           |
   v                                           v
 Claude Discord plugin                    Dedicated Codex Gateway
@@ -393,10 +393,10 @@ Do not activate until every item is complete:
 - [ ] Danger-full-access has a supervised live canary that confirms the external canonical Vault bootstrap and all four bound skills without claiming Browser, Computer Use, ambient MCP, apps, plugins, skill search, or multi-agent support.
 - [ ] No outbound sender or obsolete marker-watcher service is loaded.
 - [ ] Claude takeover backup, reconciliation, safe-row drain, and readiness complete without ambiguity.
-- [ ] An owner message in `#chat` gets an eyes reaction, public thread, and Claude reply.
+- [ ] An owner message in `#claude` gets an eyes reaction, public thread, and Claude reply.
 - [ ] An owner message in `#chatgpt` gets an eyes reaction, public thread, Codex reply, and context-aware follow-up.
 - [ ] A non-owner message in `#chatgpt` produces no reaction, thread, job, or model turn.
-- [ ] A non-owner message in `#chat` produces no reaction, thread, queue row, or model turn.
+- [ ] A non-owner message in `#claude` produces no reaction, thread, queue row, or model turn.
 - [ ] The Codex monitor shows the owner input, job state, and sanitized delivered reply.
 - [ ] Gateway reconnect and process restart canaries preserve continuity without duplicate replies.
 - [ ] Sensitive-output canaries demonstrate best-effort redact-never-withhold behavior without treating public output as confidential, and ambiguous-approval canaries fail safely.

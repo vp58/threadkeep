@@ -34,7 +34,7 @@ One Discord server may coordinate several computers, but each provider and machi
 | --- | --- | --- |
 | Discord application | Dedicated Claude application | Dedicated Codex application installed for one server |
 | Bot token | Keychain account `discord-bot-token` | Keychain account `discord-bot-token-codex` |
-| Listen channel | `[discord].chat_channel_id`, recommended `#chat` | `[codex].channel_id`, recommended `#chatgpt`, must differ |
+| Listen channel | `[discord].chat_channel_id`, recommended `#claude` | `[codex].channel_id`, recommended `#chatgpt`, must differ |
 | Who may start work | Exact configured owner only | Exact configured owner only |
 | Local control plane | Interactive Claude Code tmux | Headless Python LaunchAgent |
 | Model connection | Claude Code Discord plugin and Agent tool | Codex App Server over local stdio JSONL |
@@ -49,7 +49,7 @@ Separate Keychain accounts reduce accidental credential crossover. They do not p
 ```text
                               PUBLIC DISCORD SERVER
 
-  Claude channel                                      Codex channel
+  #claude                                             #chatgpt
         |                                                    |
         v                                                    v
 +--------------------+                              +--------------------+

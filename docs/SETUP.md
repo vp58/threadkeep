@@ -6,7 +6,7 @@ This guide installs the original Claude provider and the optional Codex provider
 
 | Choice | Discord resources | Local runtime |
 | --- | --- | --- |
-| Claude only | One Claude bot in `#chat` | Interactive `discoparty-chat` tmux listener |
+| Claude only | One Claude bot in `#claude` | Interactive `discoparty-chat` tmux listener |
 | Codex only | One Codex bot in `#chatgpt` | Headless `com.discoparty.codex-discord-bridge` LaunchAgent |
 | Both | Two applications, two bots, and two channels | Both independent runtimes |
 
@@ -222,7 +222,7 @@ Check the approval Gateway process:
 launchctl print gui/$UID/com.discoparty.discord-gateway-client | head -20
 ```
 
-Post a test message in the Claude channel. Verify the eyes reaction, public thread, markdown transcript, and worker reply in Discord. A running process alone does not prove the workflow reached Discord.
+Post a test message in `#claude`. Verify the eyes reaction, public thread, markdown transcript, and worker reply in Discord. A running process alone does not prove the workflow reached Discord.
 
 ## 4. Understand the isolated ChatGPT sign-in
 

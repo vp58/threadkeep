@@ -39,7 +39,7 @@ Adds the separate #chatgpt Gateway, durable App Server worker, ChatGPT subscript
 
 ## Claude provider and shared Discord core
 
-Hardens the existing Claude #chat lane, public-channel permissions, transport, liveness, durable queue, takeover, review semantics, token handling, and shared utilities without adding an outbound sender.
+Hardens the existing Claude #claude lane, public-channel permissions, transport, liveness, durable queue, takeover, review semantics, token handling, and shared utilities without adding an outbound sender.
 
 - **Modified:** `agent/cx-chat.md`
 - **Modified:** `approval/create_thread.py`
