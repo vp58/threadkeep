@@ -7,10 +7,15 @@ config.toml
 discord-gateway/logs/
 discord-gateway/state/
 discord-gateway/approvals/
+discord-gateway/approval-bindings/
 discord-gateway/pending/
+discord-gateway/inflight/
 discord-gateway/completed/
 discord-gateway/failed/
 discord-gateway/processed-markers/
+discord-gateway/.marker-watcher.lock
+codex-discord/logs/
+codex-discord/state/
 logs/
 
 # Python

@@ -41,16 +41,17 @@ from pathlib import Path
 _HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(_HERE))
 import mq  # noqa: E402
+sys.path.insert(0, str(_HERE.parent))
+from config import CONFIG  # noqa: E402
 
 _REPO_ROOT = _HERE.parents[1]
 _DISCORD_SCRIPTS = Path(
     os.environ.get("THREADKEEP_DISCORD_SCRIPTS", str(_REPO_ROOT / "approval"))
 ).expanduser()
 SEND = _DISCORD_SCRIPTS / "send_message.py"
-ERRORS_CHANNEL = os.environ.get("THREADKEEP_ERRORS_CHANNEL_ID", "")
+ERRORS_CHANNEL = CONFIG.discord.errors_channel_id
 
-_conv = os.environ.get("THREADKEEP_CONVERSATIONS_DIR")
-_LOG_DIR = (Path(_conv).expanduser() if _conv else _HERE.parent) / "logs"
+_LOG_DIR = CONFIG.paths.conversations_dir / "logs"
 METRICS_LOG = _LOG_DIR / "queue-metrics.jsonl"
 # Sidecar de-dupe state for the in-flight WARN so one stuck row alerts once (and
 # then only every RE_ALERT_INFLIGHT_SEC) instead of re-posting every run for the
@@ -74,7 +75,7 @@ def _alert(text: str) -> None:
         return
     try:
         subprocess.run(
-            ["python3", str(SEND), "--channel-id", ERRORS_CHANNEL, "--message", text],
+            [sys.executable, str(SEND), "--channel-id", ERRORS_CHANNEL, "--message", text],
             capture_output=True, text=True, timeout=20, check=False,
         )
     except Exception as e:  # pragma: no cover

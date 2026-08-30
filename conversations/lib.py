@@ -11,16 +11,19 @@ from __future__ import annotations
 
 import contextlib
 import json
+import os
 import re
+import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-try:  # fcntl is POSIX-only; on platforms without it the lock is a no-op.
+try:
     import fcntl
-except Exception:  # pragma: no cover
-    fcntl = None  # type: ignore
+except Exception as exc:  # pragma: no cover
+    raise RuntimeError("Threadkeep requires POSIX advisory locking") from exc
+import stat
 
 from config import CONFIG, configured_timezone
 
@@ -40,26 +43,34 @@ DISCORD_CHAT_CHANNEL = CONFIG.discord.chat_channel_id
 def registry_lock():
     """Hold an exclusive advisory lock for the duration of a transcript /
     registry read-modify-write so two concurrent workers cannot lose each
-    other's appends. Fail-open: if locking is unavailable, proceed unlocked
-    rather than break the live path."""
-    f = None
-    if fcntl is not None:
-        try:
-            LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
-            f = open(LOCK_FILE, "w")
-            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-        except Exception:
-            if f is not None:
-                with contextlib.suppress(Exception):
-                    f.close()
-            f = None
+    other's appends. Any lock or state-file error fails closed."""
+    LOCK_FILE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    parent = LOCK_FILE.parent.lstat()
+    if (
+        stat.S_ISLNK(parent.st_mode)
+        or not stat.S_ISDIR(parent.st_mode)
+        or parent.st_uid != os.getuid()
+    ):
+        raise RuntimeError("conversation lock directory is unsafe")
+    os.chmod(LOCK_FILE.parent, 0o700, follow_symlinks=False)
+    flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_CLOEXEC", 0)
+    flags |= getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(LOCK_FILE, flags, 0o600)
     try:
+        os.fchmod(descriptor, 0o600)
+        metadata = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or metadata.st_uid != os.getuid()
+            or metadata.st_nlink != 1
+        ):
+            raise RuntimeError("conversation lock is unsafe")
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
         yield
     finally:
-        if f is not None:
-            with contextlib.suppress(Exception):
-                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-                f.close()
+        with contextlib.suppress(Exception):
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
+        os.close(descriptor)
 
 
 # ----- timestamps -----
@@ -136,6 +147,30 @@ def write_frontmatter(fm: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _write_private_text(path: Path, text: str) -> None:
+    """Atomically replace one current-user state file with mode 0600."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", dir=path.parent
+    )
+    temporary = Path(temporary_name)
+    try:
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            descriptor = -1
+            stream.write(text)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        os.chmod(path, 0o600, follow_symlinks=False)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        with contextlib.suppress(FileNotFoundError):
+            temporary.unlink()
+
+
 def _render_kv(k: str, v: Any) -> str:
     if isinstance(v, list):
         if not v:
@@ -174,8 +209,7 @@ def load_conversation(session_id: str) -> tuple[dict[str, Any], str, Path]:
 
 
 def save_conversation(fm: dict[str, Any], body: str, path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(write_frontmatter(fm) + body)
+    _write_private_text(path, write_frontmatter(fm) + body)
 
 
 # ----- registry -----
@@ -188,7 +222,7 @@ def load_registry() -> dict[str, Any]:
 
 def save_registry(reg: dict[str, Any]) -> None:
     reg["last_regenerated"] = now_iso()
-    REGISTRY.write_text(json.dumps(reg, indent=2) + "\n")
+    _write_private_text(REGISTRY, json.dumps(reg, indent=2) + "\n")
 
 
 def regen_registry_from_disk() -> dict[str, Any]:
@@ -283,8 +317,7 @@ def regen_index() -> None:
     lines.append(f"**Counts:** active {len(active)} | archived {len(archived)} | total {len(convos)}")
     lines.append("")
 
-    INDEX.parent.mkdir(parents=True, exist_ok=True)
-    INDEX.write_text("\n".join(lines))
+    _write_private_text(INDEX, "\n".join(lines))
 
 
 # ----- operations -----
@@ -298,25 +331,74 @@ def create_conversation(
 ) -> dict[str, Any]:
     """Create a new conversation .md. Returns frontmatter dict."""
     sid = session_id or str(uuid.uuid4())
-    now = now_iso()
-    fm = {
-        "id": sid,
-        "title": title,
-        "discord_channel_id": channel_id or DISCORD_CHAT_CHANNEL,
-        "discord_thread_id": thread_id,
-        "claude_session_id": sid,
-        "status": "active",
-        "created": now,
-        "last_message_at": now,
-        "message_count": 0,
-        "last_action_by": "system",
-        "tags": tags or [],
-    }
-    body = f"\n# {title}\n\n## Summary\n\n## Open loops\n\n## Transcript\n\n"
-    ACTIVE.mkdir(parents=True, exist_ok=True)
-    save_conversation(fm, body, ACTIVE / f"{sid}.md")
-    regen_index()
-    return fm
+    with registry_lock():
+        path = ACTIVE / f"{sid}.md"
+        if path.exists() or (ARCHIVED / f"{sid}.md").exists():
+            raise FileExistsError(f"conversation {sid} already exists")
+        now = now_iso()
+        fm = {
+            "id": sid,
+            "title": title,
+            "discord_channel_id": channel_id or DISCORD_CHAT_CHANNEL,
+            "discord_thread_id": thread_id,
+            "claude_session_id": sid,
+            "status": "active",
+            "created": now,
+            "last_message_at": now,
+            "message_count": 0,
+            "last_action_by": "system",
+            "tags": tags or [],
+        }
+        body = f"\n# {title}\n\n## Summary\n\n## Open loops\n\n## Transcript\n\n"
+        ACTIVE.mkdir(parents=True, exist_ok=True)
+        save_conversation(fm, body, path)
+        regen_index()
+        return fm
+
+
+def ensure_conversation(
+    *,
+    title: str,
+    thread_id: str,
+    channel_id: str,
+    session_id: str,
+) -> tuple[dict[str, Any], bool]:
+    """Create one frozen conversation or verify the exact crash replay."""
+
+    with registry_lock():
+        existing = conversation_path(session_id)
+        if existing.exists():
+            fm, _body = parse_frontmatter(existing.read_text())
+            exact = (
+                str(fm.get("claude_session_id") or "") == session_id
+                and str(fm.get("discord_thread_id") or "") == thread_id
+                and str(fm.get("discord_channel_id") or "") == channel_id
+                and str(fm.get("title") or "") == title
+                and str(fm.get("status") or "") == "active"
+            )
+            if not exact:
+                raise RuntimeError("existing conversation conflicts with frozen binding")
+            regen_index()
+            return fm, False
+        now = now_iso()
+        fm = {
+            "id": session_id,
+            "title": title,
+            "discord_channel_id": channel_id,
+            "discord_thread_id": thread_id,
+            "claude_session_id": session_id,
+            "status": "active",
+            "created": now,
+            "last_message_at": now,
+            "message_count": 0,
+            "last_action_by": "system",
+            "tags": [],
+        }
+        body = f"\n# {title}\n\n## Summary\n\n## Open loops\n\n## Transcript\n\n"
+        ACTIVE.mkdir(parents=True, exist_ok=True)
+        save_conversation(fm, body, ACTIVE / f"{session_id}.md")
+        regen_index()
+        return fm, True
 
 
 def _display_path(path: Path) -> str:
@@ -341,6 +423,45 @@ def append_turn(session_id: str, speaker: str, text: str) -> None:
         body = body.rstrip() + "\n" + entry
         save_conversation(fm, body, path)
         regen_index()
+
+
+def append_turn_once(
+    session_id: str,
+    speaker: str,
+    text: str,
+    *,
+    completion_token: str,
+    text_sha256: str,
+    marker_kind: str = "response",
+) -> bool:
+    """Append one crash-replay-safe worker turn.
+
+    The completion token is random queue state that inbound Discord text cannot
+    predict. Returns False when the exact turn was already appended.
+    """
+
+    if not re.fullmatch(r"[a-f0-9]{32}", completion_token):
+        raise ValueError("invalid completion token")
+    if not re.fullmatch(r"[a-f0-9]{64}", text_sha256):
+        raise ValueError("invalid completion response digest")
+    if marker_kind not in {"input", "response"}:
+        raise ValueError("invalid transcript idempotency marker kind")
+    marker_prefix = f"<!-- threadkeep-{marker_kind}:{completion_token}:"
+    marker = f"{marker_prefix}{text_sha256} -->"
+    with registry_lock():
+        fm, body, path = load_conversation(session_id)
+        if marker in body:
+            return False
+        if marker_prefix in body:
+            raise RuntimeError("completion token was already used for different text")
+        fm["last_message_at"] = now_iso()
+        fm["last_action_by"] = speaker
+        fm["message_count"] = int(fm.get("message_count", 0) or 0) + 1
+        entry = f"\n### {now_human()}, {speaker}\n\n{marker}\n{text}\n"
+        body = body.rstrip() + "\n" + entry
+        save_conversation(fm, body, path)
+        regen_index()
+        return True
 
 
 def set_status(session_id: str, status: str) -> None:
@@ -419,8 +540,9 @@ def list_conversations(status: str | None = None, tag: str | None = None) -> lis
 
 def thread_to_session(thread_id: str) -> str | None:
     """Look up which session_id owns a given Discord thread."""
-    reg = load_registry()
-    return reg.get("by_thread", {}).get(str(thread_id))
+    with registry_lock():
+        reg = load_registry()
+        return reg.get("by_thread", {}).get(str(thread_id))
 
 
 def find_by_prefix(id_prefix: str) -> str | None:

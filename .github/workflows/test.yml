@@ -19,18 +19,45 @@ jobs:
           - "3.13"
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: python -m pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade setuptools==83.0.0
+          python -m pip install -r requirements.txt
 
       - name: Compile Python files
-        run: python -m py_compile conversations/*.py approval/*.py discord-gateway/*.py
+        run: >-
+          python -m py_compile
+          conversations/*.py
+          approval/*.py
+          discord-gateway/*.py
+          codex_discord_bridge/*.py
+          codex-discord/evals/*.py
+          codex-discord/tests/*.py
 
-      - name: Run tests
+      - name: Run Discord Gateway tests
         run: python -m unittest discover -s discord-gateway/tests -t discord-gateway -v
+
+      - name: Run conversation queue tests
+        run: python conversations/queue/tests/run_tests.py
+
+      - name: Run Claude takeover tests
+        run: python -m unittest conversations/queue/tests/test_claude_takeover.py -v
+
+      - name: Run Codex bridge tests
+        run: PYTHONPATH=. python -m unittest discover -s codex-discord/tests -v
+
+      - name: Run Codex installer scratch smoke test
+        run: bash codex-discord/tests/test_install_codex.sh
+
+      - name: Audit Python dependencies
+        uses: pypa/gh-action-pip-audit@1220774d901786e6f652ae159f7b6bc8fea6d266 # v1.1.0
+
+      - name: Check shell syntax
+        run: bash -n install.sh install-codex.sh uninstall.sh cx-launcher.sh launchd/*.sh

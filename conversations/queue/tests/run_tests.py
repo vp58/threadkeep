@@ -24,12 +24,15 @@ Backward-compat:
 """
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
+import sqlite3
 import subprocess
 import sys
 import tempfile
 import time
+from unittest import mock
 from pathlib import Path
 
 THIS = Path(__file__).resolve()
@@ -96,7 +99,106 @@ def _run(args: list[str], ws: Path, check_rc: bool = True) -> subprocess.Complet
 
 
 def dispatch(ws: Path, *args: str, check_rc: bool = True):
-    return _run(["python3", str(CONVERSATIONS_DIR / "dispatch.py"), *args], ws, check_rc)
+    if not args or args[0] not in {"top-level", "reply"}:
+        raise ValueError("test dispatch requires top-level or reply")
+    mode = args[0]
+    options = dict(zip(args[1::2], args[2::2]))
+    message_id = options["--message-id"]
+    chat_id = options["--channel-id"] if mode == "top-level" else options["--thread-id"]
+    mqmod, conn = mq_conn(ws)
+    try:
+        if mqmod.get(conn, message_id) is None:
+            mqmod.enqueue(
+                conn,
+                message_id=message_id,
+                chat_id=chat_id,
+                body=options["--message"],
+                user=options.get("--user"),
+            )
+            subprocess.run(
+                [
+                    "python3",
+                    str(FAKE_DISCORD / "react.py"),
+                    "--channel-id",
+                    chat_id,
+                    "--message-id",
+                    message_id,
+                    "--emoji",
+                    "eyes",
+                ],
+                env=_env(ws),
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            mqmod.mark_acked(conn, message_id)
+            row = mqmod.claim_next(conn)
+            if row is None or row["message_id"] != message_id:
+                raise RuntimeError("test queue could not claim dispatch row")
+        payload = {"message_id": message_id}
+        if mode == "top-level":
+            payload["title"] = options["--title"]
+    finally:
+        conn.close()
+    result = subprocess.run(
+        ["python3", str(CONVERSATIONS_DIR / "dispatch.py")],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        env=_env(ws),
+        timeout=120,
+    )
+    if check_rc and result.returncode != 0:
+        raise RuntimeError(
+            f"dispatch failed rc={result.returncode}\nSTDOUT:{result.stdout}\nSTDERR:{result.stderr}"
+        )
+    return result
+
+
+def _claim_message(
+    ws: Path,
+    *,
+    message_id: str,
+    chat_id: str,
+    body: str,
+    user: str = "owner",
+):
+    mqmod, conn = mq_conn(ws)
+    mqmod.enqueue(
+        conn,
+        message_id=message_id,
+        chat_id=chat_id,
+        body=body,
+        user=user,
+    )
+    row = mqmod.claim_next(conn)
+    if row is None or row["message_id"] != message_id:
+        conn.close()
+        raise RuntimeError("test could not claim the expected queue message")
+    return mqmod, conn, row
+
+
+def _dispatch_stdin(
+    ws: Path,
+    message_id: str,
+    *,
+    title: str | None = None,
+    extra_env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess:
+    payload = {"message_id": message_id}
+    if title is not None:
+        payload["title"] = title
+    environment = _env(ws)
+    if extra_env:
+        environment.update(extra_env)
+    return subprocess.run(
+        ["python3", str(CONVERSATIONS_DIR / "dispatch.py")],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        env=environment,
+        timeout=120,
+    )
 
 
 def _set_inprocess_env(ws: Path) -> None:
@@ -258,7 +360,7 @@ def test_per_thread_ordering_and_mutex():
     third = mqmod.claim_next(conn)
     check(third is None, "no thread yields a 2nd in-flight row (per-thread mutex)")
     # Finish a1 -> A's next (a2) becomes claimable, in order.
-    mqmod.mark_done(conn, "a1")
+    mqmod.mark_errored(conn, "a1", "test terminal transition")
     nxt = mqmod.claim_next(conn)
     check(nxt is not None and nxt["message_id"] == "a2", "thread A resumes at a2 in order")
     conn.close()
@@ -300,7 +402,7 @@ def test_regression_inline_without_thread():
     out = json.loads(r.stdout.strip().splitlines()[-1])
     threads = [c for c in _calls(v) if c["call"] == "create_thread"]
     check(len(threads) == 1, "a short top-level still creates a thread (no inline reply)")
-    check(out["thread_id"].startswith("thr_"), "thread_id present in result")
+    check(out["thread_id"] == "reg_inline", "starter thread id equals source message id")
 
 
 def test_regression_skipped_dispatch_detectable():
@@ -372,6 +474,509 @@ def test_concurrent_appends_no_loss():
     check(present == 8, f"all 8 concurrent appends survived (found {present}/8) under lock")
 
 
+def test_dispatch_argv_secrecy():
+    print("[12] security: body, title, and user never appear in dispatch/helper argv")
+    v = _setup_workspace()
+    body = "BODY_SENTINEL_9f4b"
+    title = "TITLE SENTINEL 7c2a"
+    user = "USER_SENTINEL_3d8e"
+    message_id = "100000000000009901"
+    mqmod, conn, row = _claim_message(
+        v,
+        message_id=message_id,
+        chat_id=CHAT_CHANNEL,
+        body=body,
+        user=user,
+    )
+    _set_inprocess_env(v)
+    import importlib
+    import drainer as _drainer
+
+    importlib.reload(_drainer)
+    real_run = subprocess.run
+    captured: list[list[str]] = []
+
+    def recording_run(command, *args, **kwargs):
+        captured.append([str(value) for value in command])
+        return real_run(command, *args, **kwargs)
+
+    with mock.patch.object(_drainer.subprocess, "run", side_effect=recording_run):
+        result = _drainer.dispatch_claimed(conn, row, title=title)
+    mqmod.mark_dispatched(
+        conn,
+        message_id,
+        session_id=result["session_id"],
+        thread_id=result["thread_id"],
+    )
+    argv_text = "\0".join(value for command in captured for value in command)
+    check(body not in argv_text, "owner message body is absent from every dispatch argv")
+    check(title not in argv_text, "generated title is absent from every dispatch argv")
+    check(user not in argv_text, "owner display name is absent from every dispatch argv")
+    helper_calls = [c for c in _calls(v) if c["call"] == "create_thread"]
+    check(len(helper_calls) == 1, "thread helper was called exactly once")
+    helper_argv = "\0".join(helper_calls[0]["argv"])
+    check(body not in helper_argv and title not in helper_argv and user not in helper_argv,
+          "opaque text is absent from helper argv")
+    check(body in Path(result["convo_path"]).read_text(), "stdin/private-state body reached transcript")
+    conn.close()
+
+
+def test_ambiguous_thread_create_reconciles_without_repost():
+    print("[13] crash replay: accepted thread create reconciles by frozen message ID")
+    v = _setup_workspace()
+    message_id = "100000000000009902"
+    _mqmod, conn, _row = _claim_message(
+        v,
+        message_id=message_id,
+        chat_id=CHAT_CHANNEL,
+        body="thread create crash body",
+    )
+    conn.close()
+    first = _dispatch_stdin(
+        v,
+        message_id,
+        title="Crash safe thread",
+        extra_env={"THREADKEEP_TEST_THREAD_CRASH_AFTER_CREATE": "1"},
+    )
+    check(first.returncode != 0, "simulated loss of create acknowledgment fails closed")
+    with sqlite3.connect(_env(v)["THREADKEEP_MQ_DB"]) as db:
+        state = db.execute(
+            "SELECT state,thread_id FROM dispatch_operations WHERE message_id=?",
+            (message_id,),
+        ).fetchone()
+    check(state == ("thread_create_attempted", message_id),
+          "attempt and deterministic thread binding were durable before POST")
+    check(not list((v / "conversations" / "active").glob("*.md")),
+          "no conversation was fabricated without a confirmed thread")
+    second = _dispatch_stdin(v, message_id, title="Crash safe thread")
+    check(second.returncode == 0, f"retry reconciled accepted thread ({second.stderr.strip()})")
+    out = json.loads(second.stdout)
+    check(out["thread_id"] == message_id, "reconciled thread equals starter message ID")
+    calls = [c for c in _calls(v) if c["call"] == "create_thread"]
+    check([c["operation"] for c in calls] == ["create", "reconcile"],
+          "retry used GET-only reconciliation and never repeated create")
+    transcript = Path(out["convo_path"]).read_text()
+    check(transcript.count("thread create crash body") == 1,
+          "reconciled dispatch appended exactly one user turn")
+
+
+def test_thread_create_crash_before_effect_recovers_once():
+    print("[14] crash replay: pre-effect create crash recovers after durable absence")
+    v = _setup_workspace()
+    message_id = "100000000000009905"
+    _mqmod, conn, _row = _claim_message(
+        v,
+        message_id=message_id,
+        chat_id=CHAT_CHANNEL,
+        body="pre-effect create crash body",
+    )
+    conn.close()
+    first = _dispatch_stdin(
+        v,
+        message_id,
+        title="Recover absent thread",
+        extra_env={"THREADKEEP_TEST_THREAD_FAIL_BEFORE_CREATE": "1"},
+    )
+    check(first.returncode != 0, "pre-effect create crash fails closed")
+    with sqlite3.connect(_env(v)["THREADKEEP_MQ_DB"]) as db:
+        state = db.execute(
+            "SELECT state,thread_id FROM dispatch_operations WHERE message_id=?",
+            (message_id,),
+        ).fetchone()
+    check(state == ("thread_create_attempted", message_id),
+          "unknown create outcome remains durably marked attempted")
+    check(not (v / "fake-threads.json").exists(),
+          "simulated pre-effect crash created no Discord thread")
+
+    replay = _dispatch_stdin(v, message_id, title="Recover absent thread")
+    check(replay.returncode == 0,
+          f"bounded absence recovery completed ({replay.stderr.strip()})")
+    out = json.loads(replay.stdout)
+    calls = [c for c in _calls(v) if c["call"] == "create_thread"]
+    check([c["operation"] for c in calls] == ["create", "reconcile", "recover"],
+          "replay reconciled before the single recovery create")
+    fake_threads = json.loads((v / "fake-threads.json").read_text())
+    check(list(fake_threads) == [message_id],
+          "recovery created exactly the deterministic starter thread")
+    transcript = Path(out["convo_path"]).read_text()
+    check(transcript.count("pre-effect create crash body") == 1,
+          "recovered dispatch appended exactly one user turn")
+
+
+def test_thread_recovery_state_survives_second_crash():
+    print("[15] crash replay: durable absence survives a crash before recovery POST")
+    v = _setup_workspace()
+    message_id = "100000000000009906"
+    _mqmod, conn, _row = _claim_message(
+        v,
+        message_id=message_id,
+        chat_id=CHAT_CHANNEL,
+        body="second recovery crash body",
+    )
+    conn.close()
+    first = _dispatch_stdin(
+        v,
+        message_id,
+        title="Persist recovery evidence",
+        extra_env={"THREADKEEP_TEST_THREAD_FAIL_BEFORE_CREATE": "1"},
+    )
+    check(first.returncode != 0, "initial pre-effect failure was injected")
+    second = _dispatch_stdin(
+        v,
+        message_id,
+        title="Persist recovery evidence",
+        extra_env={"THREADKEEP_TEST_THREAD_FAIL_BEFORE_RECOVERY": "1"},
+    )
+    check(second.returncode != 0, "crash after absence evidence fails closed")
+    with sqlite3.connect(_env(v)["THREADKEEP_MQ_DB"]) as db:
+        state = db.execute(
+            "SELECT state,thread_absence_confirmed_at "
+            "FROM dispatch_operations WHERE message_id=?",
+            (message_id,),
+        ).fetchone()
+    check(state is not None and state[0] == "thread_absence_confirmed" and state[1],
+          "bounded absence evidence is durable before the recovery POST")
+    check(not (v / "fake-threads.json").exists(),
+          "second injected crash still has no external thread effect")
+
+    replay = _dispatch_stdin(v, message_id, title="Persist recovery evidence")
+    check(replay.returncode == 0,
+          f"durable recovery state resumed successfully ({replay.stderr.strip()})")
+    out = json.loads(replay.stdout)
+    calls = [c for c in _calls(v) if c["call"] == "create_thread"]
+    check([c["operation"] for c in calls] ==
+          ["create", "reconcile", "recover", "recover"],
+          "restart resumed recovery without reverting to initial create")
+    transcript = Path(out["convo_path"]).read_text()
+    check(transcript.count("second recovery crash body") == 1,
+          "second crash replay still appended one user turn")
+
+
+def test_thread_recovery_uses_bounded_exact_probes():
+    print("[16] recovery: exact deterministic GET probes precede a retry POST")
+    v = _setup_workspace()
+    _set_inprocess_env(v)
+    module_name = f"threadkeep_create_thread_test_{os.getpid()}"
+    spec = importlib.util.spec_from_file_location(
+        module_name, CONVERSATIONS_DIR.parent / "approval" / "create_thread.py"
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError("could not load the real create-thread helper")
+    helper = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(helper)
+    message_id = "100000000000009907"
+    name = "Bounded recovery"
+    request = {
+        "operation": "recover",
+        "channel_id": CHAT_CHANNEL,
+        "message_id": message_id,
+        "name": name,
+        "auto_archive": 1440,
+    }
+    exact_thread = {
+        "id": message_id,
+        "parent_id": CHAT_CHANNEL,
+        "type": 11,
+        "owner_id": helper.CONFIG.discord.bot_user_id,
+        "name": name,
+    }
+
+    with mock.patch.object(
+        helper, "_get_existing", side_effect=[None, None, None, exact_thread]
+    ) as get_existing, mock.patch.object(helper.time, "sleep"), mock.patch.object(
+        helper, "_create_once"
+    ) as create_once:
+        resolved = helper._resolve_thread(request, "fake-token", name=name)
+    check(resolved == exact_thread and get_existing.call_count == 4,
+          "late exact thread visibility is accepted within the bounded probe window")
+    check(create_once.call_count == 0,
+          "a visible deterministic thread suppresses the recovery POST")
+
+    with mock.patch.object(
+        helper, "_get_existing", side_effect=[None, None, None, None]
+    ) as get_existing, mock.patch.object(helper.time, "sleep") as sleeper, mock.patch.object(
+        helper, "_create_once", return_value=exact_thread
+    ) as create_once:
+        resolved = helper._resolve_thread(request, "fake-token", name=name)
+    check(resolved == exact_thread and get_existing.call_count == 4,
+          "recovery uses one initial GET plus exactly three absence probes")
+    check(sleeper.call_count == helper.RECOVERY_ABSENCE_PROBES - 1,
+          "bounded probes wait only between observations")
+    check(create_once.call_count == 1,
+          "confirmed bounded absence permits exactly one recovery POST")
+
+
+def test_concurrent_dispatch_is_single_effect():
+    print("[17] concurrency: two dispatchers create one thread and one user turn")
+    v = _setup_workspace()
+    message_id = "100000000000009903"
+    _mqmod, conn, _row = _claim_message(
+        v,
+        message_id=message_id,
+        chat_id=CHAT_CHANNEL,
+        body="concurrent dispatch body",
+    )
+    conn.close()
+    environment = _env(v)
+    environment["THREADKEEP_TEST_THREAD_CREATE_DELAY"] = "0.4"
+    payload = json.dumps({"message_id": message_id, "title": "Concurrent dispatch"})
+    processes = [
+        subprocess.Popen(
+            ["python3", str(CONVERSATIONS_DIR / "dispatch.py")],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=environment,
+        )
+        for _ in range(2)
+    ]
+    results = [process.communicate(payload, timeout=120) for process in processes]
+    check(all(process.returncode == 0 for process in processes),
+          f"both concurrent replays succeeded ({[stderr for _, stderr in results]})")
+    outputs = [json.loads(stdout) for stdout, _stderr in results]
+    check(outputs[0] == outputs[1], "concurrent replays returned one frozen binding")
+    calls = [c for c in _calls(v) if c["call"] == "create_thread"]
+    check(len(calls) == 1 and calls[0]["operation"] == "create",
+          "only one thread-create helper call crossed the side-effect boundary")
+    transcript = Path(outputs[0]["convo_path"]).read_text()
+    check(transcript.count("concurrent dispatch body") == 1,
+          "concurrent dispatch appended the inbound turn exactly once")
+
+
+def test_dispatch_tamper_fails_closed():
+    print("[18] tamper: changed queue body cannot replay a completed dispatch")
+    v = _setup_workspace()
+    message_id = "100000000000009904"
+    _mqmod, conn, _row = _claim_message(
+        v,
+        message_id=message_id,
+        chat_id=CHAT_CHANNEL,
+        body="original immutable body",
+    )
+    conn.close()
+    first = _dispatch_stdin(v, message_id, title="Immutable dispatch")
+    check(first.returncode == 0, "initial immutable dispatch succeeded")
+    out = json.loads(first.stdout)
+    with sqlite3.connect(_env(v)["THREADKEEP_MQ_DB"]) as db:
+        db.execute(
+            "UPDATE messages SET body='tampered replacement' WHERE message_id=?",
+            (message_id,),
+        )
+    replay = _dispatch_stdin(v, message_id, title="Immutable dispatch")
+    check(replay.returncode != 0 and "immutable request" in replay.stderr,
+          "changed durable body is rejected by request digest")
+    transcript = Path(out["convo_path"]).read_text()
+    check(transcript.count("original immutable body") == 1,
+          "original transcript turn remains exactly once")
+    check("tampered replacement" not in transcript,
+          "tampered body never reaches the transcript")
+    check(len([c for c in _calls(v) if c["call"] == "create_thread"]) == 1,
+          "tampered replay causes no second Discord side effect")
+
+
+def test_dispatch_lock_and_db_errors_fail_closed():
+    print("[19] state safety: unsafe lock and corrupt DB stop before side effects")
+    v = _setup_workspace()
+    message_id = "100000000000009905"
+    _mqmod, conn, _row = _claim_message(
+        v,
+        message_id=message_id,
+        chat_id=CHAT_CHANNEL,
+        body="must not dispatch",
+    )
+    conn.close()
+    lock = v / "conversations" / "state" / ".dispatch.lock"
+    lock.symlink_to(v / "outside-lock-target")
+    blocked = _dispatch_stdin(v, message_id, title="Unsafe lock")
+    check(blocked.returncode != 0, "symlinked dispatch lock fails closed")
+    check(not _calls(v), "unsafe lock fails before any Discord helper")
+
+    broken = _setup_workspace()
+    db_path = broken / "conversations" / "state" / "mq.sqlite3"
+    db_path.write_bytes(b"not a sqlite database")
+    os.chmod(db_path, 0o600)
+    os.environ.update({
+        "THREADKEEP_VAULT_ROOT": str(broken),
+        "THREADKEEP_CONVERSATIONS_DIR": str(broken / "conversations"),
+        "THREADKEEP_MQ_DB": str(db_path),
+    })
+    sys.path.insert(0, str(QUEUE_DIR))
+    import importlib
+    import mq as corrupt_mq
+
+    importlib.reload(corrupt_mq)
+    try:
+        corrupt_mq.connect()
+    except Exception:
+        failed = True
+    else:
+        failed = False
+    check(failed, "corrupt queue database is rejected instead of recreated or bypassed")
+
+
+def test_reaction_failure_never_marks_queue_acked():
+    print("[20] acknowledgment: 401, 403, and nonzero child exits remain retriable")
+    for index, status in enumerate(("401", "403", "nonzero")):
+        v = _setup_workspace()
+        mqmod, conn = mq_conn(v)
+        import importlib
+        import intake as _intake
+
+        importlib.reload(_intake)
+        message_id = f"1000000000000099{10 + index}"
+        os.environ["THREADKEEP_TEST_REACT_STATUS"] = status
+        try:
+            failed = _intake.handle_inbound(
+                message_id=message_id,
+                chat_id=CHAT_CHANNEL,
+                body=f"ack failure {status}",
+                user="owner",
+                conn=conn,
+            )
+        finally:
+            os.environ.pop("THREADKEEP_TEST_REACT_STATUS", None)
+        row = mqmod.get(conn, message_id)
+        check(not failed["acked"], f"HTTP/exit {status} is not reported as acknowledged")
+        check(row["acked_at"] is None, f"HTTP/exit {status} leaves acked_at NULL")
+        retried = _intake.handle_inbound(
+            message_id=message_id,
+            chat_id=CHAT_CHANNEL,
+            body=f"ack failure {status}",
+            user="owner",
+            conn=conn,
+        )
+        check(retried["acked"], f"HTTP/exit {status} row retries the eye reaction")
+        check(mqmod.get(conn, message_id)["acked_at"] is not None,
+              f"HTTP/exit {status} records only the later confirmed eye")
+        conn.close()
+
+
+def test_sensitive_input_is_rejected_before_queue_persistence():
+    print("[21] ingress DLP: likely secrets are rejected before durable queue storage")
+    v = _setup_workspace()
+    mqmod, conn = mq_conn(v)
+    import importlib
+    import intake as _intake
+
+    importlib.reload(_intake)
+    rejected = _intake.handle_inbound(
+        message_id="100000000000009950",
+        chat_id=CHAT_CHANNEL,
+        body="api_key=supersecretvalue123456789",
+        user="owner",
+        conn=conn,
+    )
+    check(rejected.get("rejected") == "sensitive-data", "secret input is rejected")
+    check(
+        mqmod.get(conn, "100000000000009950") is None,
+        "rejected raw input never enters the Claude queue",
+    )
+    rejection_calls = [
+        call
+        for call in _calls(v)
+        if call.get("message_id") == "100000000000009950"
+    ]
+    check(
+        len(rejection_calls) == 1 and rejection_calls[0].get("emoji") == "🚫",
+        "rejected input gets an unambiguous non-eye reaction",
+    )
+
+    accepted = _intake.handle_inbound(
+        message_id="100000000000009951",
+        chat_id=CHAT_CHANNEL,
+        body="ordinary public task",
+        user="owner",
+        conn=conn,
+    )
+    check(accepted["new"], "ordinary input still enters the queue")
+    check(
+        mqmod.get(conn, "100000000000009951")["body"] == "ordinary public task",
+        "ordinary queue content is unchanged",
+    )
+    conn.close()
+
+
+def test_disabled_codex_settings_cannot_break_claude_config():
+    print("[22] shared config: disabled Codex validation cannot break Claude startup")
+    with tempfile.TemporaryDirectory(prefix="threadkeep-config-test-") as tmp:
+        config_path = Path(tmp) / "config.toml"
+        config_path.write_text(
+            f'''[paths]
+workspace_root = "{tmp}"
+conversations_dir = "{tmp}/conversations"
+
+[discord]
+chat_channel_id = "1"
+errors_channel_id = "2"
+owner_user_id = "3"
+
+[runtime]
+timezone = "UTC"
+max_messages_per_minute = 121
+max_messages_per_hour = 2001
+max_concurrent_workers = 3
+use_dangerously_skip_permissions = false
+
+[codex]
+enabled = false
+sandbox_mode = "future-unsupported-mode"
+full_computer_access_accepted = "not-a-boolean"
+max_messages_per_minute = 0
+max_messages_per_hour = 0
+max_pending_jobs = 0
+max_input_chars = 0
+retention_days = 0
+max_database_bytes = 0
+'''
+        )
+        env = dict(os.environ)
+        for name in tuple(env):
+            if name.startswith("THREADKEEP_CODEX_"):
+                env.pop(name)
+        env["THREADKEEP_CONFIG"] = str(config_path)
+        env["THREADKEEP_CODEX_SANDBOX_MODE"] = "invalid-environment-mode"
+        env["THREADKEEP_CODEX_FULL_COMPUTER_ACCESS_ACCEPTED"] = "invalid"
+        env["THREADKEEP_CODEX_MAX_MESSAGES_PER_MINUTE"] = "invalid"
+        probe = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "from conversations.config import CONFIG; "
+                    "assert CONFIG.codex.enabled is False; "
+                    "assert CONFIG.runtime.max_messages_per_minute == 121; "
+                    "assert CONFIG.runtime.max_messages_per_hour == 2001"
+                ),
+            ],
+            cwd=CONVERSATIONS_DIR.parent,
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=30,
+        )
+        check(
+            probe.returncode == 0,
+            "disabled Codex-only settings are inert during Claude config import"
+            + (f" ({probe.stderr.strip()})" if probe.stderr.strip() else ""),
+        )
+
+        config_path.write_text(config_path.read_text().replace("enabled = false", "enabled = true"))
+        enabled_probe = subprocess.run(
+            [sys.executable, "-c", "import conversations.config"],
+            cwd=CONVERSATIONS_DIR.parent,
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=30,
+        )
+        check(
+            enabled_probe.returncode != 0
+            and "codex.sandbox_mode" in enabled_probe.stderr,
+            "enabling Codex restores strict Codex-only validation",
+        )
+
+
 def main() -> int:
     tests = [
         test_backward_compat_top_level,
@@ -385,6 +990,17 @@ def main() -> int:
         test_regression_skipped_dispatch_detectable,
         test_monitor_alerts,
         test_concurrent_appends_no_loss,
+        test_dispatch_argv_secrecy,
+        test_ambiguous_thread_create_reconciles_without_repost,
+        test_thread_create_crash_before_effect_recovers_once,
+        test_thread_recovery_state_survives_second_crash,
+        test_thread_recovery_uses_bounded_exact_probes,
+        test_concurrent_dispatch_is_single_effect,
+        test_dispatch_tamper_fails_closed,
+        test_dispatch_lock_and_db_errors_fail_closed,
+        test_reaction_failure_never_marks_queue_acked,
+        test_sensitive_input_is_rejected_before_queue_persistence,
+        test_disabled_codex_settings_cannot_break_claude_config,
     ]
     for t in tests:
         try:

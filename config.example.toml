@@ -6,31 +6,107 @@
 # always win over the TOML file so you can keep secrets out of the repo.
 
 [paths]
-# Where conversation transcripts live on disk. Path is expanded with ~.
-workspace_root = "~/.threadkeep"
-conversations_dir = "~/.threadkeep/conversations"
+# Canonical shared Vault root. Claude loads only this root's verified
+# .claude/skills link; conversation state lives in its conversations folder.
+workspace_root = "~/TheSystem"
+conversations_dir = "~/TheSystem/conversations"
 # Optional. If unset, each component logs to its own file under the repo.
 # log_file = "~/.threadkeep/threadkeep.log"
 
 [discord]
+# Guild, application, and bot identity are pinned so a different credential
+# cannot silently redirect the Claude orchestrator to another Discord bot.
+guild_id = "000000000000000000"
+bot_user_id = "000000000000000000"
+application_id = "000000000000000000"
 # Channel id Threadkeep listens to. Top-level posts here become new threads.
 chat_channel_id = "000000000000000000"
 # Channel id Threadkeep posts errors and stderr to.
 errors_channel_id = "000000000000000000"
-# Discord user id of the owner. Only this user can approve outbound sends
-# and only their button presses are honored by the router.
+# Discord user id of the owner. Only this user's review-button presses are
+# honored by the router. A review reference alone does not authorize a send.
 owner_user_id = "000000000000000000"
 # Env var name the bot token is read from at runtime. Default is fine.
 token_env_var = "DISCORD_BOT_TOKEN"
-# Optional fallback: a file containing the bot token. Used only if the env
-# var is unset. Keep the file out of version control and chmod 600.
-# token_file = "~/.config/threadkeep/discord-bot-token"
-
+# Normal macOS installs resolve the token from this Keychain item.
+keychain_service = "threadkeep-secret"
+keychain_account = "discord-bot-token"
+# Dedicated state for the official Claude Discord channel plugin. Threadkeep
+# writes and verifies the static owner-only allowlist, then the launcher injects
+# the Keychain token directly into the pinned process. A stale .env blocks launch.
+plugin_state_dir = "~/Library/Application Support/Threadkeep/claude-discord"
 [runtime]
 timezone = "UTC"
 max_messages_per_minute = 5
 max_messages_per_hour = 30
+# Claude queue workers. Codex has a separate bounded pool below.
 max_concurrent_workers = 3
 # Leave false unless you know what you are doing. When true the spawned
 # worker subagent runs without permission prompts.
 use_dangerously_skip_permissions = false
+
+# Optional second orchestrator. Claude remains enabled through the settings
+# above. Codex is a separate provider with its own Discord bot and channel, so
+# the two runtimes cannot consume or answer each other's messages.
+[codex]
+enabled = false
+# Separate App Server processes allow independent Discord threads to make
+# progress concurrently. One thread remains strictly ordered. Range: 1..4.
+max_concurrent_workers = 3
+# The dedicated Codex application and bot must belong only to this guild.
+guild_id = "000000000000000000"
+channel_id = "000000000000000000"
+owner_user_id = "000000000000000000"
+bot_user_id = "000000000000000000"
+application_id = "000000000000000000"
+# Fail-safe default. public uses best-effort output redaction and is not a
+# confidentiality boundary. owner_private requires @everyone View Channel to
+# be denied, exact member View Channel allows for the guild owner and dedicated
+# bridge, and no other role, member allow, or effective reader. Runtime checks
+# require Discord's Server Members intent and fail closed on drift.
+channel_trust = "public"
+working_directory = "~/path/to/your-workspace"
+# Installer and runtime require an explicit subpath below the canonical
+# ~/Library/Application Support/Threadkeep root and reject unsafe ancestry.
+state_dir = "~/Library/Application Support/Threadkeep/codex-discord"
+codex_home = "~/Library/Application Support/Threadkeep/codex-discord/home/.codex"
+codex_bin = "/opt/homebrew/bin/codex"
+
+# workspace-write selects Threadkeep's custom root-deny, network-off profile.
+# Sandbox authority is independent of channel_trust. danger-full-access
+# requires the explicit full-computer-access acceptance below.
+sandbox_mode = "workspace-write"
+full_computer_access_accepted = false
+
+# The installer creates this isolated CODEX_HOME and performs an official
+# ChatGPT browser login using the real macOS user HOME so Keychain is available.
+# Config, skills, sessions, and history stay isolated by CODEX_HOME. Credentials
+# must live only in macOS Keychain; auth.json and its variants are rejected.
+# codex_home must stay exactly state_dir/home/.codex.
+
+# Optional trusted base-instruction file. Keep it outside working_directory.
+# Workspace AGENTS.md and fallback project documents are not auto-loaded.
+# instructions_file = "~/.threadkeep/CODEX.md"
+
+# One canonical skill source shared with Claude. This must resolve exactly to
+# [paths].workspace_root/x_System/Skills. The installer creates four validated
+# links inside the isolated CODEX_HOME for skill-finder, ELI5, vinaytalks, and
+# triage. It never copies skill content. Skill-finder is injected on every turn;
+# the other exact canonical skills follow deterministic routing rules. Full
+# mode also uses the canonical Vault CLAUDE.md as its trusted bootstrap when no
+# separate instructions_file is configured.
+shared_skills_root = "~/TheSystem/x_System/Skills"
+
+# Admission and storage limits. The two rate limits otherwise inherit [runtime].
+max_messages_per_minute = 5
+max_messages_per_hour = 30
+max_pending_jobs = 100
+max_input_chars = 12000
+retention_days = 30
+max_database_bytes = 268435456
+
+# The Codex bot token is kept separate from the Claude bot token and exists
+# only in macOS Keychain. Noninteractive installs require this exact entry to
+# be provisioned before the installer starts; environment overrides are denied.
+keychain_service = "threadkeep-secret"
+keychain_account = "discord-bot-token-codex"

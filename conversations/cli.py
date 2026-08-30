@@ -23,6 +23,7 @@ import sys
 from pathlib import Path
 
 import lib
+import safe_files
 
 
 def _resolve(id_or_prefix: str) -> str:
@@ -98,7 +99,14 @@ def cmd_status(args: argparse.Namespace) -> None:
 
 def cmd_append_turn(args: argparse.Namespace) -> None:
     sid = _resolve(args.id)
-    lib.append_turn(sid, speaker=args.speaker, text=args.text)
+    text = (
+        safe_files.read("response", args.text_exchange_id, consume=False)
+        if args.text_exchange_id
+        else args.text
+    )
+    if text is None or not text.strip():
+        raise SystemExit("append-turn text is required")
+    lib.append_turn(sid, speaker=args.speaker, text=text)
     print(f"appended {args.speaker} turn to {sid}")
 
 
@@ -127,7 +135,13 @@ def cmd_gc(args: argparse.Namespace) -> None:
 
 def cmd_search(args: argparse.Namespace) -> None:
     """Fall back to ripgrep against active/ and archived/."""
-    query = args.query
+    query = (
+        safe_files.read("query", args.query_exchange_id, consume=True)
+        if args.query_exchange_id
+        else args.query
+    )
+    if query is None or not query.strip():
+        raise SystemExit("search query is required")
     cmd = ["rg", "-l", "-i", query, str(lib.ACTIVE), str(lib.ARCHIVED)]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
@@ -180,7 +194,9 @@ def main() -> None:
     p_app = sub.add_parser("append-turn")
     p_app.add_argument("id")
     p_app.add_argument("--speaker", required=True, choices=["user", "claude", "system"])
-    p_app.add_argument("--text", required=True)
+    append_input = p_app.add_mutually_exclusive_group(required=True)
+    append_input.add_argument("--text")
+    append_input.add_argument("--text-exchange-id")
     p_app.set_defaults(func=cmd_append_turn)
 
     p_th = sub.add_parser("thread-lookup")
@@ -195,7 +211,9 @@ def main() -> None:
     p_gc.set_defaults(func=cmd_gc)
 
     p_s = sub.add_parser("search")
-    p_s.add_argument("query")
+    search_input = p_s.add_mutually_exclusive_group(required=True)
+    search_input.add_argument("query", nargs="?")
+    search_input.add_argument("--query-exchange-id")
     p_s.set_defaults(func=cmd_search)
 
     args = p.parse_args()

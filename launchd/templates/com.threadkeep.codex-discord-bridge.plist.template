@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>__LABEL__</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__PYTHON_BIN__</string>
+        <string>-m</string>
+        <string>codex_discord_bridge.main</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__REPO_ROOT__</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>__HOME__</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>PYTHONPATH</key>
+        <string>__REPO_ROOT__</string>
+        <key>PYTHONUNBUFFERED</key>
+        <string>1</string>
+        <key>THREADKEEP_REPO_ROOT</key>
+        <string>__REPO_ROOT__</string>
+        <key>THREADKEEP_CONFIG</key>
+        <string>__CONFIG_PATH__</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+        <key>Crashed</key>
+        <true/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <!-- Keep descendants in launchd's process group so a bridge crash cannot
+         leave an App Server or tool process running after restart. -->
+    <key>AbandonProcessGroup</key>
+    <false/>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>Umask</key>
+    <integer>63</integer>
+
+    <key>StandardOutPath</key>
+    <string>__LOG_DIR__/codex-discord-bridge.stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__LOG_DIR__/codex-discord-bridge.stderr.log</string>
+</dict>
+</plist>
