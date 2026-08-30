@@ -4,6 +4,30 @@ Disco Party supports two Discord orchestrators with separate transport and state
 
 The Claude provider preserves the original interactive listener design. The Codex provider is a headless, event-driven bridge built on OpenAI's official [Codex App Server](https://learn.chatgpt.com/docs/app-server).
 
+## The orchestration layer
+
+Disco Party is the control plane around the agents. Discord is the remote interface. Claude Code and Codex are the workers.
+
+The orchestrator owns the parts a model session should not have to improvise: exact ingress authorization, provider and machine routing, durable task identity, concurrency, conversation resumption, delivery evidence, retries, and crash recovery. That is what lets one front door stay responsive while longer tasks run elsewhere.
+
+```text
+Discord event
+    -> authorize owner and immutable route
+    -> persist task before execution
+    -> dispatch to the correct provider worker
+    -> preserve per-thread ordering
+    -> freeze and deliver the result
+    -> resume the same conversation on the next reply
+```
+
+Claude and Codex use different worker implementations. Claude's listener launches a background Agent subagent for each dispatched turn. Codex uses a bounded pool of App Server processes, with one active job per Discord thread. Codex subagents remain disabled because the bridge cannot attest their descendant lifecycle and policy events.
+
+The durable orchestration state is shared in purpose, not format. Claude uses append-only Markdown plus a JSON registry. Codex uses SQLite plus persisted Codex thread IDs. Provider credentials and model sessions stay separate. A deliberately shared working directory can carry artifacts between providers, and Discord can carry the human-visible handoff.
+
+## Machine topology
+
+One Discord server may coordinate several computers, but each provider and machine needs a dedicated bot, channel, runtime, and state path. Several machines consuming one bot and channel could accept the same event and duplicate side effects. The safe current topology is one server with routes such as `#claude-work-mac` and `#chatgpt-home-m5`, not several workers racing on one route.
+
 ## Provider boundary
 
 | Boundary | Claude | Codex |

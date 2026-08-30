@@ -4,6 +4,32 @@
 
 Disco Party is a local Discord conversation orchestrator for Claude Code and OpenAI Codex. It turns top-level channel messages into public Discord threads and keeps enough durable state to route later replies to the correct agent conversation.
 
+It is the control plane around the agents. Discord is the remote interface, and Claude Code or Codex does the work. Disco Party authorizes the request, persists it, selects the correct provider and machine, dispatches it, keeps each thread ordered, resumes the right model conversation, and delivers or reconciles the result.
+
+## Why call it an orchestrator instead of a Discord bot?
+
+A basic bot receives a message and sends a reply. Disco Party manages the full lifecycle around the work: identity, routing, durable state, concurrency, provider sessions, recovery, and delivery evidence. The listener can remain available while background work continues.
+
+Claude implements that worker layer with background Agent subagents. Codex uses a bounded pool of official App Server workers. Codex subagents are disabled because Disco Party cannot yet prove their complete child lifecycle and policy events.
+
+## Why use Discord instead of SSH or a remote desktop?
+
+SSH and remote desktop expose a machine. Discord gives the orchestration layer a mobile interface, notifications, durable threads, and searchable history. You can start a task from a phone, follow it from another laptop, and return to the exact conversation later without keeping a terminal open in front of you.
+
+Discord is not a replacement for terminal access when you need direct control. It is the command and coordination surface for agent-owned tasks.
+
+## Can I use one Discord server with several computers?
+
+Yes, with a dedicated route for each provider and machine. For example, a server could contain `#claude-work-mac` and `#chatgpt-home-m5`, each with its own bot, runtime, and state.
+
+Do not attach several machines to the same bot and channel. They could consume the same event and perform the work twice. Same server is supported as an orchestration pattern. Same bot and channel across several runtimes is not.
+
+## Can Claude and Codex hand work to each other?
+
+Yes, through explicit durable context. Their credentials and model sessions remain separate, but both can work in the same intentional local workspace. Claude can create a plan or artifact, then Codex can inspect and continue it, or the other way around. Discord threads can also remain the complete human-visible handoff record.
+
+Disco Party does not silently merge a Claude session with a Codex session. The handoff is through files, artifacts, and instructions you can inspect.
+
 ## Can I run Claude and Codex at the same time?
 
 Yes. They are separate providers with separate bots, channels, tokens, model logins, runtimes, and state. The recommended public channels are Claude `#chat` and Codex `#chatgpt`. Install Claude with `bash install.sh`, then add Codex with `bash install-codex.sh`.

@@ -10,6 +10,8 @@ This guide installs the original Claude provider and the optional Codex provider
 | Codex only | One Codex bot in `#chatgpt` | Headless `com.discoparty.codex-discord-bridge` LaunchAgent |
 | Both | Two applications, two bots, and two channels | Both independent runtimes |
 
+Think of each row as one orchestrator route. A route binds one Discord bot and channel to one provider runtime and its durable state. You can place several routes in the same Discord server to reach a work Mac and a home Mac from one command center, but each machine and provider needs its own route.
+
 Do not point Claude and Codex at the same channel. Do not reuse one bot token for both. Dedicate the Codex application and bot to this integration and install that bot in exactly one Discord server. Gateway READY fails unless its guild inventory is exactly the configured guild. The Codex configuration loader rejects a channel that matches the Claude listen channel. Preflight compares the Codex token with standard discoverable Claude token sources. A custom Claude token source may not be discoverable, so the operator remains responsible for token separation.
 
 A Discord channel can remain public to server members. Public controls who can read it. The Codex ingress policy separately controls who can trigger work and accepts only the configured owner user ID.
